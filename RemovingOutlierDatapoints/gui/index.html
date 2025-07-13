@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CSV Time Series Plotter</title>
+    <link rel="stylesheet" href="styles.css">
+    <script src="node_modules/chart.js/dist/chart.umd.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
+    <script src="node_modules/papaparse/papaparse.min.js"></script>
+</head>
+<body>
+    <div id="app">
+        <!-- Landing Page -->
+        <div id="landing-page" class="page active">
+            <div class="container">
+                <header class="header">
+                    <h1 class="title">📊 CSV Time Series Plotter</h1>
+                    <p class="subtitle">Upload your CSV file to create beautiful time series visualizations</p>
+                </header>
+
+                <main class="main-content">
+                    <!-- Drag and Drop Zone -->
+                    <div id="drop-zone" class="drop-zone">
+                        <div class="drop-zone-content">
+                            <div class="upload-icon">📤</div>
+                            <h2 class="drop-title">Drag & Drop Your CSV File Here</h2>
+                            <p class="drop-subtitle">or click anywhere to browse</p>
+                            <div class="file-types">
+                                <span class="file-type">.csv</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Browse Button -->
+                    <div class="browse-section">
+                        <button id="browse-btn" class="browse-button">
+                            📁 Browse Files
+                        </button>
+                        <p class="browse-hint">Select CSV files from your computer</p>
+                    </div>
+                </main>
+
+                <footer class="footer">
+                    <div class="features">
+                        <div class="feature">
+                            <span class="feature-icon">🎯</span>
+                            <span>Smart Column Detection</span>
+                        </div>
+                        <div class="feature">
+                            <span class="feature-icon">📈</span>
+                            <span>Interactive Charts</span>
+                        </div>
+                        <div class="feature">
+                            <span class="feature-icon">⚡</span>
+                            <span>Fast Processing</span>
+                        </div>
+                    </div>
+                </footer>
+            </div>
+        </div>
+
+        <!-- Plotting Page -->
+        <div id="plotting-page" class="page">
+            <div class="container">
+                <!-- Header with file info and back button -->
+                <header class="plotting-header">
+                    <button id="back-btn" class="back-button">← Back to Upload</button>
+                    <div class="file-info">
+                        <span id="file-name" class="file-name">No file loaded</span>
+                        <span id="file-stats" class="file-stats">0 rows × 0 columns</span>
+                    </div>
+                </header>
+
+                <!-- Controls Section -->
+                <section class="controls-section">
+                    <div class="controls-grid">
+                        <div class="control-group">
+                            <label for="time-column">Time Column (X-axis)</label>
+                            <select id="time-column" class="column-select">
+                                <option value="">Select time column...</option>
+                            </select>
+                        </div>
+                        <div class="control-group">
+                            <label for="data-column">Data Column (Y-axis)</label>
+                            <select id="data-column" class="column-select">
+                                <option value="">Select data column...</option>
+                            </select>
+                        </div>
+                        <div class="control-group">
+                            <button id="plot-btn" class="plot-button" disabled>
+                                📈 Generate Plot
+                            </button>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Chart Section -->
+                <section class="chart-section">
+                    <div class="chart-container">
+                        <canvas id="chart"></canvas>
+                    </div>
+                    <div id="chart-placeholder" class="chart-placeholder">
+                        <div class="placeholder-content">
+                            <span class="placeholder-icon">📊</span>
+                            <h3>Select columns and click "Generate Plot"</h3>
+                            <p>Your time series chart will appear here</p>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Region Analysis Section -->
+                <section id="region-analysis" class="region-analysis hidden">
+                    <div class="region-controls">
+                        <h3>📍 Region Analysis Setup</h3>
+                        <p class="instruction-text">Click on the chart to select the end of the first region, then specify the total number of regions.</p>
+                        
+                        <div class="region-controls-grid">
+                            <div class="region-control-group">
+                                <label for="first-region-end">End of First Region</label>
+                                <div class="region-selection-display">
+                                    <span id="first-region-end" class="region-value">Click on chart to select</span>
+                                    <button id="clear-selection" class="clear-btn" style="display: none;">Clear</button>
+                                </div>
+                                <small class="help-text">Click anywhere on the chart line to set the boundary</small>
+                            </div>
+                            
+                            <div class="region-control-group">
+                                <label for="region-count">Number of Regions</label>
+                                <input type="number" id="region-count" class="region-input" 
+                                       min="2" max="20" placeholder="Enter number of regions">
+                                <small class="help-text">Total number of regions to analyze (2-20)</small>
+                            </div>
+                            
+                            <div class="region-control-group">
+                                <button id="next-btn" class="next-button" disabled>
+                                    ➡️ Next: Analyze Regions
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <div id="region-info" class="region-info hidden">
+                            <div class="info-card">
+                                <h4>Selection Summary</h4>
+                                <div class="info-grid">
+                                    <div class="info-item">
+                                        <span class="info-label">First Region End:</span>
+                                        <span id="selected-point-info" class="info-value">-</span>
+                                    </div>
+                                    <div class="info-item">
+                                        <span class="info-label">Total Regions:</span>
+                                        <span id="total-regions-info" class="info-value">-</span>
+                                    </div>
+                                    <div class="info-item">
+                                        <span class="info-label">Data Points per Region:</span>
+                                        <span id="points-per-region" class="info-value">-</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+            </div>
+        </div>
+
+        <!-- Loading Overlay -->
+        <div id="loading-overlay" class="loading-overlay">
+            <div class="loading-content">
+                <div class="spinner"></div>
+                <p>Processing your CSV file...</p>
+            </div>
+        </div>
+
+        <!-- Error Modal -->
+        <div id="error-modal" class="modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3>❌ Error</h3>
+                    <button id="error-close" class="modal-close">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <p id="error-message">An error occurred</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Success Modal -->
+        <div id="success-modal" class="modal">
+            <div class="modal-content success">
+                <div class="modal-header">
+                    <h3>✅ File Loaded Successfully!</h3>
+                    <button id="success-close" class="modal-close">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <div id="success-message">
+                        <p><strong id="success-filename">file.csv</strong></p>
+                        <div class="file-stats-grid">
+                            <div class="stat">
+                                <span class="stat-label">Rows:</span>
+                                <span id="success-rows" class="stat-value">0</span>
+                            </div>
+                            <div class="stat">
+                                <span class="stat-label">Columns:</span>
+                                <span id="success-columns" class="stat-value">0</span>
+                            </div>
+                        </div>
+                        <p class="success-hint">Ready to create your plot! 📈</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="renderer.js"></script>
+</body>
+</html> 

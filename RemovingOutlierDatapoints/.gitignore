@@ -1,5 +1,11 @@
+*.csv
 
-output/
-data/
-.venv/
+# Dependencies
+node_modules/
 
+# Build outputs
+build/
+dist/
+
+# Log files
+*.log
