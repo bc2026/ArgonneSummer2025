@@ -1,0 +1,46 @@
+{
+  "name": "csv-time-series-plotter",
+  "version": "1.0.0",
+  "description": "A modern CSV time series plotting application with drag-and-drop support",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "dev": "electron . --dev",
+    "build": "electron-builder",
+    "dist": "electron-builder --publish=never"
+  },
+  "author": "CSV Plotter",
+  "license": "MIT",
+  "devDependencies": {
+    "electron": "^27.0.0",
+    "electron-builder": "^24.6.4"
+  },
+  "dependencies": {
+    "papaparse": "^5.4.1",
+    "chart.js": "^4.4.0",
+    "date-fns": "^2.30.0"
+  },
+  "build": {
+    "appId": "com.csvplotter.app",
+    "productName": "CSV Time Series Plotter",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "main.js",
+      "renderer.js",
+      "index.html",
+      "styles.css",
+      "node_modules/**/*"
+    ],
+    "mac": {
+      "category": "public.app-category.productivity"
+    },
+    "win": {
+      "target": "nsis"
+    },
+    "linux": {
+      "target": "AppImage"
+    }
+  }
+} 

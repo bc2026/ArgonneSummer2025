@@ -1,0 +1,13 @@
+*.csv
+
+# Dependencies
+node_modules/
+
+# Build outputs
+build/
+dist/
+
+# Log files
+*.log
+
+.venv
