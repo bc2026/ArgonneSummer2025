@@ -113,23 +113,57 @@
                 <section id="region-analysis" class="region-analysis hidden">
                     <div class="region-controls">
                         <h3>📍 Region Analysis Setup</h3>
-                        <p class="instruction-text">Click on the chart to select the end of the first region, then specify the total number of regions.</p>
+                        <p class="instruction-text">Select region boundaries by clicking on the chart. Choose your selection mode below, then click on the chart to set the boundary.</p>
+                        
+                        <div class="region-selection-modes">
+                            <div class="mode-selector">
+                                <label class="mode-label">Selection Mode:</label>
+                                <div class="mode-buttons">
+                                    <button id="mode-region-start" class="mode-btn active" data-mode="region-start">
+                                        🔵 Region Start
+                                    </button>
+                                    <button id="mode-region-end" class="mode-btn" data-mode="region-end">
+                                        🔴 Region End
+                                    </button>
+                                    <button id="mode-first-region-end" class="mode-btn" data-mode="first-region-end">
+                                        🟡 End of First Region
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
                         
                         <div class="region-controls-grid">
+                            <div class="region-control-group">
+                                <label for="region-start">Region Start</label>
+                                <div class="region-selection-display">
+                                    <span id="region-start" class="region-value">Click on chart to select</span>
+                                    <button id="clear-region-start" class="clear-btn" style="display: none;">Clear</button>
+                                </div>
+                                <small class="help-text">Select "Region Start" mode and click on the chart</small>
+                            </div>
+                            
+                            <div class="region-control-group">
+                                <label for="region-end">Region End</label>
+                                <div class="region-selection-display">
+                                    <span id="region-end" class="region-value">Click on chart to select</span>
+                                    <button id="clear-region-end" class="clear-btn" style="display: none;">Clear</button>
+                                </div>
+                                <small class="help-text">Select "Region End" mode and click on the chart</small>
+                            </div>
+                            
                             <div class="region-control-group">
                                 <label for="first-region-end">End of First Region</label>
                                 <div class="region-selection-display">
                                     <span id="first-region-end" class="region-value">Click on chart to select</span>
-                                    <button id="clear-selection" class="clear-btn" style="display: none;">Clear</button>
+                                    <button id="clear-first-region-end" class="clear-btn" style="display: none;">Clear</button>
                                 </div>
-                                <small class="help-text">Click anywhere on the chart line to set the boundary</small>
+                                <small class="help-text">Select "End of First Region" mode and click on the chart</small>
                             </div>
                             
                             <div class="region-control-group">
-                                <label for="region-count">Number of Regions</label>
-                                <input type="number" id="region-count" class="region-input" 
-                                       min="2" max="20" placeholder="Enter number of regions">
-                                <small class="help-text">Total number of regions to analyze (2-20)</small>
+                                <button id="clear-all-selections" class="clear-all-btn">
+                                    🗑️ Clear All Selections
+                                </button>
                             </div>
                             
                             <div class="region-control-group">
@@ -144,8 +178,16 @@
                                 <h4>Selection Summary</h4>
                                 <div class="info-grid">
                                     <div class="info-item">
+                                        <span class="info-label">Region Start:</span>
+                                        <span id="selected-region-start-info" class="info-value">-</span>
+                                    </div>
+                                    <div class="info-item">
+                                        <span class="info-label">Region End:</span>
+                                        <span id="selected-region-end-info" class="info-value">-</span>
+                                    </div>
+                                    <div class="info-item">
                                         <span class="info-label">First Region End:</span>
-                                        <span id="selected-point-info" class="info-value">-</span>
+                                        <span id="selected-first-region-end-info" class="info-value">-</span>
                                     </div>
                                     <div class="info-item">
                                         <span class="info-label">Total Regions:</span>
@@ -205,6 +247,85 @@
                             </div>
                         </div>
                         <p class="success-hint">Ready to create your plot! 📈</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Preview Modal -->
+        <div id="preview-modal" class="modal">
+            <div class="modal-content preview">
+                <div class="modal-header">
+                    <h3>📊 Preview: Region Detection</h3>
+                    <button id="preview-close" class="modal-close">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <div id="preview-content">
+                        <p class="preview-description">
+                            This is a preview of your data with detected regions. 
+                            The blue points show left derivatives, and orange points show your data.
+                        </p>
+                        
+                        <div class="preview-image-container" id="preview-image-container">
+                            <img id="preview-image" src="" alt="Preview Plot" class="preview-image">
+                        </div>
+                        
+                        <div class="preview-stats">
+                            <div class="stat">
+                                <span class="stat-label">Detected Regions:</span>
+                                <span id="preview-regions-count" class="stat-value">-</span>
+                            </div>
+                            <div class="stat">
+                                <span class="stat-label">Shift Points:</span>
+                                <span id="preview-shifts-count" class="stat-value">-</span>
+                            </div>
+                        </div>
+                        
+                        <div class="preview-question">
+                            <h4>Are the sections identified correctly?</h4>
+                            <p class="question-description">
+                                The p-value controls how similar regions need to be before they're merged. 
+                                A lower value means more regions will be kept separate, while a higher value will merge more regions.
+                            </p>
+                        </div>
+                        
+                        <div class="preview-controls">
+                            <div class="p-value-control">
+                                <label for="p-value-slider">
+                                    P-value: <span id="p-value-display" class="p-value-display">70</span>
+                                </label>
+                                <div class="slider-container">
+                                    <input type="range" id="p-value-slider" class="p-value-slider" 
+                                           min="1" max="100" value="70" step="1">
+                                    <div class="slider-labels">
+                                        <span>1</span>
+                                        <span>More Separate</span>
+                                        <span>More Merged</span>
+                                        <span>100</span>
+                                    </div>
+                                </div>
+                                <small class="help-text">
+                                    <span id="live-preview-status" class="live-status">Move slider to see live preview</span>
+                                </small>
+                            </div>
+                            
+                            <div class="regression-indices-control">
+                                <label for="regression-indices">
+                                    Regression X-axis Indices:
+                                </label>
+                                <input type="text" id="regression-indices" class="regression-indices-input" 
+                                       placeholder="e.g., 1,2,3,4 (comma-separated, equal to number of regions)">
+                                <small class="help-text">
+                                    Enter custom indices for the regression x-axis. Should match the number of detected regions.
+                                </small>
+                            </div>
+                            
+                            <div class="preview-actions">
+                                <button id="preview-continue-btn" class="continue-button">
+                                    ✅ Continue with Analysis
+                                </button>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>

@@ -7,6 +7,10 @@ A simple offline GUI application to upload CSV files and plot columns against ti
 import tkinter as tk
 from tkinter import filedialog, messagebox, ttk
 import pandas as pd
+
+# Set matplotlib backend to prevent GUI issues
+import matplotlib
+matplotlib.use('TkAgg')  # Use TkAgg for GUI applications
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 import numpy as np

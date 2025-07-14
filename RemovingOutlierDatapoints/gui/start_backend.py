@@ -42,8 +42,8 @@ def start_backend():
         sys.exit(1)
     
     print("🚀 Starting CSV Time Series Analysis Backend...")
-    print("📍 Server will be available at: http://127.0.0.1:5000")
-    print("🔧 Health check endpoint: http://127.0.0.1:5000/health")
+    print("📍 Server will be available at: http://127.0.0.1:{PORT}")
+    print("🔧 Health check endpoint: http://127.0.0.1:{PORT}/health")
     print("⏹️  Press Ctrl+C to stop the server\n")
     
     try:
