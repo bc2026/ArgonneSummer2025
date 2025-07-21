@@ -386,7 +386,7 @@ async function generatePlot() {
                 plugins: {
                     title: {
                         display: true,
-                        text: `${dataColumn} vs ${timeColumn}`,
+                        text: `${dataColumn} vs ${timeColumn} (normalized to start at 0)`,
                         font: {
                             size: 16,
                             weight: 'bold'
@@ -481,6 +481,51 @@ async function generatePlot() {
     }
 }
 
+// Helper function to parse time values consistently
+function parseTimeValue(timeValue, fallbackIndex = 0) {
+    if (typeof timeValue === 'number') {
+        return timeValue;
+    } else if (typeof timeValue === 'string') {
+        // Remove any extra whitespace
+        const cleanTimeValue = timeValue.toString().trim();
+        
+        // Try to parse as number first (for seconds, minutes, etc.)
+        const numValue = parseFloat(cleanTimeValue);
+        if (!isNaN(numValue)) {
+            return numValue;
+        } else {
+            // Try various date formats
+            let dateValue = new Date(cleanTimeValue);
+            
+            // If that fails, try some common formats
+            if (isNaN(dateValue.getTime())) {
+                // Try YYYY-MM-DD HH:mm:ss format
+                if (cleanTimeValue.match(/^\d{4}-\d{2}-\d{2}/)) {
+                    dateValue = new Date(cleanTimeValue);
+                }
+                // Try MM/DD/YYYY format
+                else if (cleanTimeValue.match(/^\d{1,2}\/\d{1,2}\/\d{4}/)) {
+                    dateValue = new Date(cleanTimeValue);
+                }
+                // Try DD-MM-YYYY format
+                else if (cleanTimeValue.match(/^\d{1,2}-\d{1,2}-\d{4}/)) {
+                    const parts = cleanTimeValue.split('-');
+                    dateValue = new Date(`${parts[2]}-${parts[1]}-${parts[0]}`);
+                }
+            }
+            
+            if (!isNaN(dateValue.getTime())) {
+                return dateValue.getTime();
+            } else {
+                // Use fallback index to ensure proper spacing
+                return fallbackIndex;
+            }
+        }
+    } else {
+        return fallbackIndex; // Use index as fallback
+    }
+}
+
 function prepareChartData(timeColumn, dataColumn) {
     const data = currentData.data;
     const chartPoints = [];
@@ -493,50 +538,8 @@ function prepareChartData(timeColumn, dataColumn) {
         // Skip rows with missing data
         if (timeValue == null || dataValue == null) continue;
         
-        let parsedTime;
-        
-        // Enhanced time parsing
-        if (typeof timeValue === 'number') {
-            parsedTime = timeValue;
-        } else if (typeof timeValue === 'string') {
-            // Remove any extra whitespace
-            const cleanTimeValue = timeValue.toString().trim();
-            
-            // Try to parse as number first (for seconds, minutes, etc.)
-            const numValue = parseFloat(cleanTimeValue);
-            if (!isNaN(numValue)) {
-                parsedTime = numValue;
-            } else {
-                // Try various date formats
-                let dateValue = new Date(cleanTimeValue);
-                
-                // If that fails, try some common formats
-                if (isNaN(dateValue.getTime())) {
-                    // Try YYYY-MM-DD HH:mm:ss format
-                    if (cleanTimeValue.match(/^\d{4}-\d{2}-\d{2}/)) {
-                        dateValue = new Date(cleanTimeValue);
-                    }
-                    // Try MM/DD/YYYY format
-                    else if (cleanTimeValue.match(/^\d{1,2}\/\d{1,2}\/\d{4}/)) {
-                        dateValue = new Date(cleanTimeValue);
-                    }
-                    // Try DD-MM-YYYY format
-                    else if (cleanTimeValue.match(/^\d{1,2}-\d{1,2}-\d{4}/)) {
-                        const parts = cleanTimeValue.split('-');
-                        dateValue = new Date(`${parts[2]}-${parts[1]}-${parts[0]}`);
-                    }
-                }
-                
-                if (!isNaN(dateValue.getTime())) {
-                    parsedTime = dateValue.getTime();
-                } else {
-                    // Use row index as fallback to ensure proper spacing
-                    parsedTime = i;
-                }
-            }
-        } else {
-            parsedTime = i; // Use index as fallback
-        }
+        // Parse time value using helper function
+        const parsedTime = parseTimeValue(timeValue, i);
         
         // Ensure data value is numeric
         let numericDataValue;
@@ -558,6 +561,14 @@ function prepareChartData(timeColumn, dataColumn) {
     
     // Sort by x value
     chartPoints.sort((a, b) => a.x - b.x);
+    
+    // Normalize time data to start from zero (consistent with backend)
+    if (chartPoints.length > 0) {
+        const minTime = Math.min(...chartPoints.map(p => p.x));
+        chartPoints.forEach(point => {
+            point.x = point.x - minTime;
+        });
+    }
     
     // If we have very few unique X values but many points, use index-based X values
     const uniqueXValues = new Set(chartPoints.map(p => p.x));
@@ -710,35 +721,28 @@ function handleChartClick(event) {
             });
             
             if (closestPoint) {
-                // Find the original data index by matching the time value
+                // Find the original data index by matching the normalized time value
                 const timeColumn = timeColumnSelect.value;
                 let originalIndex = -1;
+                
+                // Parse and normalize all time values to match chart data
+                const normalizedTimes = [];
                 for (let i = 0; i < currentData.data.length; i++) {
                     const row = currentData.data[i];
-                    let timeValue = row[timeColumn];
-                    
-                    // Parse time value the same way as in prepareChartData
-                    if (typeof timeValue === 'number') {
-                        // Already numeric
-                    } else if (typeof timeValue === 'string') {
-                        const numValue = parseFloat(timeValue.toString().trim());
-                        if (!isNaN(numValue)) {
-                            timeValue = numValue;
-                        } else {
-                            // Try date parsing
-                            const dateValue = new Date(timeValue.toString().trim());
-                            if (!isNaN(dateValue.getTime())) {
-                                timeValue = dateValue.getTime();
-                            } else {
-                                timeValue = i; // fallback to index
-                            }
-                        }
-                    } else {
-                        timeValue = i; // fallback to index
-                    }
+                    const timeValue = row[timeColumn];
+                    const parsedTime = parseTimeValue(timeValue, i);
+                    normalizedTimes.push(parsedTime);
+                }
+                
+                // Find minimum time for normalization
+                const minTime = Math.min(...normalizedTimes);
+                
+                // Normalize and find matching index
+                for (let i = 0; i < normalizedTimes.length; i++) {
+                    const normalizedTime = normalizedTimes[i] - minTime;
                     
                     // Check if this matches our selected point (with small tolerance for floating point)
-                    if (Math.abs(timeValue - closestPoint.x) < 0.001) {
+                    if (Math.abs(normalizedTime - closestPoint.x) < 0.001) {
                         originalIndex = i;
                         break;
                     }
@@ -1762,37 +1766,29 @@ async function setDefaultRegionSelections() {
             let startIndex = -1;
             let endIndex = -1;
             
+            // Parse and normalize all time values to match chart data
+            const normalizedTimes = [];
             for (let i = 0; i < data.length; i++) {
                 const row = data[i];
-                let timeValue = row[timeColumn];
-                
-                // Parse time value the same way as in prepareChartData
-                if (typeof timeValue === 'number') {
-                    // Already numeric
-                } else if (typeof timeValue === 'string') {
-                    const numValue = parseFloat(timeValue.toString().trim());
-                    if (!isNaN(numValue)) {
-                        timeValue = numValue;
-                    } else {
-                        // Try date parsing
-                        const dateValue = new Date(timeValue.toString().trim());
-                        if (!isNaN(dateValue.getTime())) {
-                            timeValue = dateValue.getTime();
-                        } else {
-                            timeValue = i; // fallback to index
-                        }
-                    }
-                } else {
-                    timeValue = i; // fallback to index
-                }
+                const timeValue = row[timeColumn];
+                const parsedTime = parseTimeValue(timeValue, i);
+                normalizedTimes.push(parsedTime);
+            }
+            
+            // Find minimum time for normalization
+            const minTime = Math.min(...normalizedTimes);
+            
+            // Normalize and find matching indices
+            for (let i = 0; i < normalizedTimes.length; i++) {
+                const normalizedTime = normalizedTimes[i] - minTime;
                 
                 // Check for start time match
-                if (Math.abs(timeValue - defaults.region_start_index) < 0.001) {
+                if (Math.abs(normalizedTime - defaults.region_start_index) < 0.001) {
                     startIndex = i;
                 }
                 
                 // Check for end time match
-                if (Math.abs(timeValue - defaults.region_end_index) < 0.001) {
+                if (Math.abs(normalizedTime - defaults.region_end_index) < 0.001) {
                     endIndex = i;
                 }
             }

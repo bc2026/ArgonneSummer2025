@@ -62,19 +62,25 @@ class CSVAnalyzer:
 
     def load_csv_data(self, csv_content, time_column, response):
         """Load and validate CSV data"""
+        df = pd.read_csv(io.StringIO(csv_content))
+        
         try:
-            # Parse CSV content
-            df = pd.read_csv(io.StringIO(csv_content))
-            
             # Validate columns exist
             if time_column not in df.columns:
                 raise ValueError(f"Time column '{time_column}' not found in CSV")
             if response not in df.columns:
                 raise ValueError(f"Data column '{response}' not found in CSV")
             
+            # Normalize the time column to start from zero
+            df[time_column] = df[time_column] - df[time_column].min()
+            
+            # Rename time column to 'Time' for consistency with rest of codebase
+            if time_column != 'Time':
+                df = df.rename(columns={time_column: 'Time'})
+            
             # Store data
             self.data = df
-            self.time_column = time_column
+            self.time_column = 'Time'  # Always use 'Time' internally after renaming
             self.response = response
             self._update_plot_paths()
 

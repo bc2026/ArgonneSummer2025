@@ -117,7 +117,7 @@ def main():
         sys.exit(1)
     
     print("\n✅ Both services started successfully!")
-    print("🌐 Backend: http://127.0.0.1:5000")
+    print("🌐 Backend: http://127.0.0.1:{PORT}")
     print("🖥️  Frontend: Electron app should open automatically")
     print("\n⏹️  Press Ctrl+C to stop both services")
     
