@@ -581,20 +581,22 @@ body {
     border-color: #667eea;
 }
 
-.regression-indices-control {
+.input-control-group {
     display: flex;
     flex-direction: column;
     gap: 8px;
     margin-top: 20px;
 }
 
-.regression-indices-control label {
+.input-control-group label {
     font-weight: 500;
     color: #333;
     font-size: 0.9rem;
 }
 
-.regression-indices-input {
+input,
+textarea,
+select {
     padding: 12px 15px;
     border: 2px solid #e0e0e0;
     border-radius: 10px;
@@ -604,13 +606,16 @@ body {
     width: 100%;
 }
 
-.regression-indices-input:focus {
+input:focus,
+textarea:focus,
+select:focus {
     outline: none;
     border-color: #007bff;
     box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.1);
 }
 
-.regression-indices-input::placeholder {
+input::placeholder,
+textarea::placeholder {
     color: #666;
     font-style: italic;
 }
@@ -852,6 +857,16 @@ body {
     transition: all 0.3s ease;
 }
 
+.echem-analysis {
+    margin-top: 30px;
+    background: rgba(255,255,255,0.95);
+    border-radius: 15px;
+    padding: 25px;
+    backdrop-filter: blur(10px);
+    border: 2px solid #e9ecef;
+    transition: all 0.3s ease;
+}
+
 .region-analysis.hidden {
     display: none;
 }
@@ -863,6 +878,8 @@ body {
     align-items: center;
     gap: 10px;
 }
+
+
 
 .instruction-text {
     color: #666;

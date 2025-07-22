@@ -73,6 +73,10 @@ const pValueDisplay = document.getElementById('p-value-display');
 const livePreviewStatus = document.getElementById('live-preview-status');
 const previewContinueBtn = document.getElementById('preview-continue-btn');
 const regressionIndicesInput = document.getElementById('regression-indices');
+const regressionAxis = document.getElementById('regression-axis')
+const flow_rate = document.getElementById('flow-rate')
+const del_start = document.getElementById('del-start')
+const response_delay = document.getElementById('response-delay')
 
 // File info elements
 const fileName = document.getElementById('file-name');
@@ -1153,7 +1157,8 @@ async function updateLivePreview(pValue) {
             region_end_index: selectedRegionEnd ? selectedRegionEnd.x : null,
             first_region_end_index: selectedFirstRegionEnd ? selectedFirstRegionEnd.x : null,
             p_value: pValue,
-            regression_indices: regressionIndices
+            regression_indices: regressionIndices,
+            regression_axis: regressionAxis ? regressionAxis.value : null
         };
         
         // Send to Python backend for live preview
@@ -1233,9 +1238,13 @@ async function runAnalysis(pValue = 70) {
             region_end_index: selectedRegionEnd ? selectedRegionEnd.x : null,
             first_region_end_index: selectedFirstRegionEnd ? selectedFirstRegionEnd.x : null,
             p_value: pValue,
-            regression_indices: regressionIndices
+            regression_indices: regressionIndices,
+            regression_axis: regressionAxis ? regressionAxis.value : null,
+            flow_rate: flow_rate,
+            del_start: del_start,
+            response_delay: response_delay
         };
-        
+        // TODO: STILL NEED TO FIX axis labeling etc.
         console.log('Sending data to backend for analysis:', {
             time_column: analysisData.time_column,
             response: analysisData.response,
@@ -1243,7 +1252,8 @@ async function runAnalysis(pValue = 70) {
             region_end_index: analysisData.region_end_index,
             first_region_end_index: analysisData.first_region_end_index,
             p_value: analysisData.p_value,
-            regression_indices: analysisData.regression_indices
+            regression_indices: analysisData.regression_indices,
+            regrsesion_axis: analysisData.regression_axis
         });
         
         // Send to Python backend
@@ -1330,7 +1340,10 @@ function displayAnalysisResults(results) {
         const imageData = [
             { key: 'regions_plot', title: '📊 Regions Plot', description: 'Regional analysis with outlier removal' },
             { key: 'final_plot', title: '📈 Final Plot', description: 'Data and left derivatives visualization' },
-            { key: 'regression_plot', title: '📉 Regression Plot', description: 'Statistical regression analysis' }
+            { key: 'regression_plot', title: '📉 Regression Plot', description: 'Statistical regression analysis' },
+            { key: 'applied_potential_plot', title: '📉 Applied Potential Plot', description: 'Applied potential and response against time'},
+            
+
         ];
         
         imagePreviews = `

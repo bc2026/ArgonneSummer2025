@@ -131,6 +131,7 @@
                                 </div>
                             </div>
                         </div>
+
                         
                         <div class="region-controls-grid">
                             <div class="region-control-group">
@@ -166,11 +167,7 @@
                                 </button>
                             </div>
                             
-                            <div class="region-control-group">
-                                <button id="next-btn" class="next-button" disabled>
-                                    ➡️ Next: Analyze Regions
-                                </button>
-                            </div>
+                            
                         </div>
                         
                         <div id="region-info" class="region-info hidden">
@@ -200,6 +197,36 @@
                                 </div>
                             </div>
                         </div>
+                    </div>
+                </section>
+
+
+                 <!-- Electrochemical Controls -->
+                 <section id="echem" class="echem-analysis">
+                    <div class="ec-data-control">
+                        <h3> E-Chem Analysis </h3>
+                        
+                        <label for="flow-rate">
+                            Flow Rate:
+                        </label>
+                        <input type="text" id="flow-rate" class="flow-rate-input" 
+                               placeholder="Enter the amount of flow rate in mL/min.">
+
+                        <label for="del-start">
+                            Delay Start:
+                        </label>
+                        <input type="text" id="del-start" class="del-start-input" placeholder="Enter the delay start time: ">
+                        
+                        <label for="response-delay">
+                            Response Delay:
+                        </label>
+                        <input type="text" id="response-delay" class="response-delay-input" placeholder="Enter the response delay start time">
+                    </div>
+                    
+                    <div class="region-control-group">
+                        <button id="next-btn" class="next-button" disabled>
+                            ➡️ Next: Analyze Regions
+                        </button>
                     </div>
                 </section>
             </div>
@@ -309,11 +336,20 @@
                                 </small>
                             </div>
                             
-                            <div class="regression-indices-control">
+                            <div class="input-control-group">
+                                <label for="regression-axis">
+                                    Regression X-axis Indices:
+                                </label>
+                                <input type="text" id="regression-axis"
+                                       placeholder="Enter the label for the x-axis">
+                                <small class="help-text">
+                                    Enter the label for the x-axis in the regression graph
+                                </small>
+
                                 <label for="regression-indices">
                                     Regression X-axis Indices:
                                 </label>
-                                <input type="text" id="regression-indices" class="regression-indices-input" 
+                                <input type="text" id="regression-indices"
                                        placeholder="e.g., 1,2,3,4 (comma-separated, equal to number of regions)">
                                 <small class="help-text">
                                     Enter custom indices for the regression x-axis. Should match the number of detected regions.

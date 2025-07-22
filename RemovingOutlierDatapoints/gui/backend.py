@@ -21,6 +21,7 @@ import numpy as np
 import pandas as pd
 import logging
 from itertools import chain
+from utils.FinalUtils import (load_trunc_icp_csv, load_ec_csv, find_intervals, add_potential, CONSTANT_A, clean_white_space, interpolate)
 
 # Set matplotlib backend to non-interactive (prevents GUI issues on macOS)
 import matplotlib
@@ -49,6 +50,7 @@ class CSVAnalyzer:
         self.REGIONS_PLOT_PATH = None
         self.FINAL_PLOT_PATH = None
         self.REGRESSION_PLOT_PATH = None
+        self.APPLIED_POTENTIAL_PLOT_PATH = None
         self.zipped_files = None
         self.preview_data = None  # Store preview data for later use
 
@@ -59,6 +61,7 @@ class CSVAnalyzer:
             self.REGIONS_PLOT_PATH = config.FIGURES_PATH.joinpath(f'Regions_Uncleaned_{sanitized_response}.png')
             self.FINAL_PLOT_PATH = config.FIGURES_PATH.joinpath(f'Final_Plot_{sanitized_response}.png')
             self.REGRESSION_PLOT_PATH = config.FIGURES_PATH.joinpath(f'Regression_Plot_{sanitized_response}.png')
+            self.APPLIED_POTENTIAL_PLOT_PATH = config.FIGURES_PATH.joinpath(f'Applied_Potential_Plot_{sanitized_response}.png')
 
     def load_csv_data(self, csv_content, time_column, response):
         """Load and validate CSV data"""
@@ -92,14 +95,18 @@ class CSVAnalyzer:
             logger.error(f"Error loading CSV: {str(e)}")
             raise
 
-    def plot_regression(self, regional_means: list, custom_indices=None):
+    def plot_regression(self, regional_means: list, custom_indices=None, custom_axis=None):
         """
         Plots regression line (regional mean ~ region)
         """
         # Use custom indices if provided, otherwise use default region numbering
         if custom_indices and len(custom_indices) == len(regional_means):
             x_values = np.array(custom_indices)
-            x_label = 'Custom Index'
+
+            if custom_axis:
+                x_label = str(custom_axis)
+            else:
+                x_label = 'No Label Was Given'
         else:
             x_values = np.arange(len(regional_means))
             x_label = 'Region'
@@ -449,7 +456,7 @@ class CSVAnalyzer:
         plt.savefig(self.FINAL_PLOT_PATH, bbox_inches='tight', dpi=300)
         plt.close()
 
-    def create_live_preview(self, first_region_end_index, p_value, regression_indices=None):
+    def create_live_preview(self, first_region_end_index, p_value, regression_indices=None, regression_axis=None):
         """Create live preview showing merged regions with given p-value - exact notebook implementation"""
         try:
             if self.data is None or self.time_column is None or self.response is None:
@@ -598,6 +605,55 @@ class CSVAnalyzer:
         plt.savefig(self.FINAL_PLOT_PATH, bbox_inches='tight', dpi=300)
         plt.close()
 
+    def plot_applied_potential(self, df, response, first_region_end_index, del_start=5, response_delay=300/60, FLOW_RATE=1.0, amount=1.0):
+        """Plot applied potential and response against time"""
+        path_to_ec_csv = './data/Example/applied_potential.txt'
+        
+        # Load ICP-MS data properly
+        df = load_trunc_icp_csv(self.data, del_start=del_start, response_delay=response_delay, t=self.time_column)
+        
+        df[f'{response}-ppb'] = df[response] / CONSTANT_A
+        df[f'{response}-ug/hr'] = df[f'{response}-ppb'] * 0.01 * 60 * FLOW_RATE
+        df.set_index(self.time_column, inplace=True)
+
+        ec_df = load_ec_csv(path_to_ec_csv, t=self.time_column)
+        tN = find_intervals(I0=ec_df.index.min(), T=1, cycles=3, v=[0.4, 0.95])
+        ec_df = add_potential(tN, ec_df=ec_df)
+        
+        ec_df_aligned = ec_df.reindex(df.index, method='pad')
+
+    
+        # Extract matching values
+        t = df.index
+        y1 = df[f'{response}-ug/hr'].values
+        y2 = ec_df_aligned['Potential (v)'].values
+
+        fig, ax1 = plt.subplots(figsize=(16, 11), layout='constrained')
+
+        # Left Y-axis: Pt
+        ax1.set_xlabel('Time (s)')
+        ax1.set_ylabel(f'{response} (µg/hr)', color='tab:red')
+        line1, = ax1.plot(t, y1, color='tab:red', label=f'{response} (µg/hr)')
+        ax1.tick_params(axis='y', labelcolor='tab:red')
+
+        # Right Y-axis: Potential
+        ax2 = ax1.twinx()
+        ax2.set_ylabel('Potential (V)', color='tab:blue')
+        line2, = ax2.step(t, y2, color='tab:blue', label='Applied Potential', where='post')
+        ax2.tick_params(axis='y', labelcolor='tab:blue')
+
+        # Legend
+        lines = [line1, line2]
+        labels = [line.get_label() for line in lines]
+        ax1.legend(lines, labels, loc='lower right')
+
+        plt.xlim(5, 305/60)  # Only show the range t=2 to t=5
+        plt.title(f'{response} vs Applied Potential Over Time')
+        plt.savefig(self.APPLIED_POTENTIAL_PLOT_PATH, bbox_inches='tight', dpi=300)
+        plt.close()
+
+
+
     def plot_merged_regions_preview(self, df, merged_regions, p_value, response):
         """Plot preview showing merged regions with visual boundaries"""
         
@@ -659,10 +715,14 @@ class CSVAnalyzer:
         # Get regression plot
         if self.REGRESSION_PLOT_PATH and self.REGRESSION_PLOT_PATH.exists():
             images['regression_plot'] = self.get_plot_as_base64(self.REGRESSION_PLOT_PATH)
-            
+        
+        # Get applied potential plot
+        if self.APPLIED_POTENTIAL_PLOT_PATH and self.APPLIED_POTENTIAL_PLOT_PATH.exists():
+            images['applied_potential_plot'] = self.get_plot_as_base64(self.APPLIED_POTENTIAL_PLOT_PATH)
+
         return images
 
-    def analyze_regions(self, first_region_end_index, p_value=70, regression_indices=None):
+    def analyze_regions(self, first_region_end_index, p_value=70, regression_indices=None, regression_axis=None):
         """Perform statistical analysis on each region with configurable p-value"""
         try:
             if self.data is None or self.time_column is None or self.response is None:
@@ -699,7 +759,9 @@ class CSVAnalyzer:
 
             regional_means = self.plot_column_figure(merged_points=merged_points)
 
-            self.plot_regression(regional_means=regional_means, custom_indices=regression_indices)
+            self.plot_regression(regional_means=regional_means, custom_indices=regression_indices, custom_axis=regression_axis)
+
+            self.plot_applied_potential(df=df, response=response, first_region_end_index=first_region_end_index)
 
             logging.info("Plotting complete...")
 
@@ -947,7 +1009,17 @@ def live_preview_analysis():
         
         # Get regression indices (optional)
         regression_indices = data.get('regression_indices')
+        regression_axis = data.get('regression_axis')
+
+        # Get E-chem data
+        flow_rate = int(data.get('flow_rate'))
+        del_start = int(data.get('del_start'))
+        response_delay = int(data.get('response_delay'))
         
+        logging.info(f'flow_rate: {flow_rate}\n del_start: {del_start}\n response_delay: {response_delay}')
+
+
+
         # Convert to float if provided
         if region_start_index is not None:
             region_start_index = float(region_start_index)
@@ -977,7 +1049,7 @@ def live_preview_analysis():
             boundary_index = time_min + (time_range * 0.2)  # 20% into the data
             logger.info(f"No first_region_end_index provided for live preview, using 20% of time range: {boundary_index}")
         
-        preview_result = analyzer.create_live_preview(boundary_index, p_value, regression_indices)
+        preview_result = analyzer.create_live_preview(boundary_index, p_value, regression_indices, regression_axis)
         
         response_data = {
             'success': True,
@@ -1026,6 +1098,7 @@ def analyze_csv():
         
         # Get regression indices (optional)
         regression_indices = data.get('regression_indices')
+        regression_axis = data.get('regression_axis')
         
         # Convert to float if provided
         if region_start_index is not None:
@@ -1060,7 +1133,8 @@ def analyze_csv():
         analysis_results = analyzer.analyze_regions(
             first_region_end_index=boundary_index,
             p_value=p_value,
-            regression_indices=regression_indices
+            regression_indices=regression_indices,
+            regression_axis=regression_axis
         )
         
         # Prepare response
