@@ -106,12 +106,12 @@ def add_potential_to_dataframe(schedule: dict, df: pd.DataFrame) -> pd.DataFrame
     # It is crucial to work with a sorted DataFrame for time-series operations.
     df_processed = df.sort_index()
 
-    # Check for and handle duplicate labels in the DataFrame's index
-    if df_processed.index.duplicated().any():
-        num_duplicates = df_processed.index.duplicated().sum()
-        print(f"⚠️ Warning: Found and removed {num_duplicates} duplicate index entries to allow for correct time-based alignment.")
-        # Remove duplicates, keeping the first occurrence
-        df_processed = df_processed[~df_processed.index.duplicated(keep='first')]
+    # # Check for and handle duplicate labels in the DataFrame's index
+    # if df_processed.index.duplicated().any():
+    #     num_duplicates = df_processed.index.duplicated().sum()
+    #     print(f"⚠️ Warning: Found and removed {num_duplicates} duplicate index entries to allow for correct time-based alignment.")
+    #     # Remove duplicates, keeping the first occurrence
+    #     df_processed = df_processed[~df_processed.index.duplicated(keep='first')]
 
     # Create a pandas Series from the schedule. The index of this Series
     # will be the timestamps at which the voltage changes.
@@ -253,8 +253,8 @@ def interpolate(ec_df: pd.DataFrame, icp_trunc_df: pd.DataFrame):
         print("[interpolate] Interpolation completed")
 
         fin_df = icp_trunc_df.copy()
-        fin_df['Voltage (V)'] = interp_potentials
-        fin_df['Current (A/cm2)'] = interp_densities
+        fin_df['Interp_Voltage (V)'] = interp_potentials
+        fin_df['Interp_Current (A/cm2)'] = interp_densities
 
         # No longer saving CSV here since it's already done in backend.py
         print(f"[interpolate] Returning dataframe with shape {fin_df.shape}")
