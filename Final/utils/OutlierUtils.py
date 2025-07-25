@@ -65,8 +65,8 @@ def get_region(df: pd.DataFrame, t0, tf) -> pd.DataFrame:
     """
     mask = (df['Time'] >= t0) & (df['Time'] <= tf)
     filtered_df = df[mask]
-    # Added logging.info statement for debugging
-    logging.info(f"get_region called with t0={t0}, tf={tf}. Filtered DataFrame shape: {filtered_df.shape}")
+    # Added print statement for debugging
+    print(f"get_region called with t0={t0}, tf={tf}. Filtered DataFrame shape: {filtered_df.shape}")
     return filtered_df
 
 def left_derivatives(X: np.ndarray, Y: np.ndarray) -> pd.DataFrame:
@@ -104,88 +104,6 @@ def left_derivatives(X: np.ndarray, Y: np.ndarray) -> pd.DataFrame:
     })
 
     return df
-
-
-def merge_close_points(df: pd.DataFrame, regions: list, p: float, response: str) -> list:
-    """
-    Merges regions where the median of their 'response_column' is closer
-    than a percentage threshold 'p'.
-    Keeps the first region if others are too close.
-
-    Args:
-        df: The DataFrame containing 'Time' and 'response_column' data.
-        regions: A list of region identifiers. Each region is expected to be
-                 a tuple or list like (start_time, end_time).
-        p: The percentage threshold for merging (e.g., 5 for 5%).
-        response_column: The name of the response column in the DataFrame.
-
-    Returns:
-        A new list of merged regions (the original region identifiers).
-    """
-    if not regions:
-        return []
-
-    merged_regions = []
-    curr_region = regions[0]
-
-    logging.info(curr_region)
-    
-    # Get the DataFrame for the current region
-    curr_region_df = get_region(df, curr_region[0], curr_region[1])
-    logging.info(curr_region_df)
-
-
-    # Calculate the scalar median of the response_column for the current region
-    if curr_region_df.empty:
-        curr_median = np.nan
-        logging.warning(f"Initial region {curr_region} is empty. Median set to NaN.")
-    else:
-        curr_median = np.median(curr_region_df[response])
-    logging.info(f"Starting merge: curr_region={curr_region}, curr_median={curr_median:.2f}")
-
-
-    for i in range(1, len(regions)):
-        next_region = regions[i]
-        # Get the DataFrame for the next region
-        next_region_df = get_region(df, next_region[0], next_region[1])
-        # Calculate the scalar median of the response_column for the next region
-        if next_region_df.empty:
-            next_median = np.nan
-            logging.warning(f"Next region {next_region} is empty. Median set to NaN.")
-        else:
-            next_median = np.median(next_region_df[response])
-
-        logging.info(f"Comparing curr_region={curr_region} (median={curr_median:.2f}) with next_region={next_region} (median={next_median:.2f})")
-
-        # Handle cases where medians might be NaN (e.g., if regions were empty)
-        # If either median is NaN, they are not mergeable.
-        if np.isnan(curr_median) or np.isnan(next_median):
-            is_mergeable_result = False
-            logging.debug("  -> Not mergeable due to NaN median.")
-        else:
-            is_mergeable_result = is_mergeable(curr_median, next_median, p)
-            logging.debug(f"  -> is_mergeable returned: {is_mergeable_result}")
-
-
-        # The logic is: if NOT mergeable, add curr_region and move on.
-        # This is the standard "greedy" merge approach.
-        if not is_mergeable_result:
-            merged_regions.append(curr_region) # Add the representative of the completed group
-            logging.info(f"  -> Not mergeable. Appending {curr_region}. New curr_region={next_region}")
-            curr_region = next_region         # Start a new group with the new region
-            curr_median = next_median         # Update the current median to the new region's median
-        else:
-            # If mergeable, the next_region is absorbed into curr_region.
-            # We "pass" because curr_region remains the representative for the ongoing group.
-            logging.info(f"  -> Mergeable. Absorbing {next_region} into {curr_region}.")
-            pass
-
-    # After the loop, append the very last curr_region (which is either a standalone region
-    # or the last group of merged regions).
-    merged_regions.append(curr_region)
-    logging.info(f"Merge complete. Final merged regions: {merged_regions}")
-
-    return merged_regions
 
 
 def remove_outliers_by_region(R: tuple, response_column_name: str = '', Y: pd.DataFrame = pd.DataFrame([])) -> pd.DataFrame:

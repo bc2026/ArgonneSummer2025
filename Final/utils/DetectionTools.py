@@ -1,11 +1,10 @@
+import logging
 import sys
 import os
-sys.path.append(os.path.join(os.path.dirname(__file__), '..', 'utils'))
-from utils.OutlierUtils import *
-from utils.OutlierUtils import is_mergeable
+import pandas as pd
+import numpy as np
 
-
-def get_detected_intervals(shifts, first_region):
+def get_detected_intervals(shifts, first_region=None):
     """
     Get detected intervals from shifts
     """
@@ -14,11 +13,51 @@ def get_detected_intervals(shifts, first_region):
     if first_region:
         intervals.extend(first_region)
     
-    for shift in shifts:
-        intervals.append((shift, shift + 1))  # Simple interval around each shift
+    for j in range(len(shifts)-1):
+        intervals.append((shifts[j], shifts[j+1]))  # Simple interval around each shift
     
     return intervals
 
+
+def is_mergeable(X1, X2, p: float) -> bool:
+    """
+    Checks if two scalar values (X1 and X2) are mergeable based on a percentage difference.
+
+    Args:
+        X1: The first scalar value (e.g., median of response).
+        X2: The second scalar value.
+        p: The percentage threshold for merging (e.g., 5 for 5%).
+
+    Returns:
+        True if the absolute difference, relative to the absolute value of X1,
+        is less than or equal to p/100; False otherwise.
+    """
+    # If the scalar values are identical, they are definitely mergeable
+    if X1 == X2:
+        logging.debug(f"is_mergeable({X1}, {X2}, {p}): True (identical values)")
+        return True
+
+    dist = abs(X2 - X1) # Absolute difference between the two scalar values
+
+    norm_X1 = abs(X1) # Absolute value of the reference scalar X1
+
+    # Handle the case where the reference scalar X1 is zero.
+    # Use X2 as reference instead, or use a small epsilon if both are near zero
+    if norm_X1 == 0:
+        norm_X2 = abs(X2)
+        if norm_X2 == 0:
+            # Both are zero or very close to zero - they should be mergeable
+            logging.debug(f"is_mergeable({X1}, {X2}, {p}): True (both near zero)")
+            return True
+        else:
+            # Use X2 as reference when X1 is zero
+            norm_reference = norm_X2
+    else:
+        norm_reference = norm_X1
+
+    result = True if (dist / norm_reference <= p / 100) else False
+    logging.debug(f"is_mergeable({X1}, {X2}, {p}): dist={dist}, norm_ref={norm_reference}, ratio={dist/norm_reference:.4f}, threshold={p/100:.4f} -> {result}")
+    return result
 
 def get_detected_regions(left_derivatives_df_c: pd.DataFrame, first_region_end_index: int, response: str):
     """

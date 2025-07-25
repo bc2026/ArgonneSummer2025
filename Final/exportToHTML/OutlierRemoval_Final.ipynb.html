@@ -1,0 +1,327 @@
+<html>
+<head>
+<title>OutlierRemoval_Final.ipynb</title>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<style type="text/css">
+.s0 { color: #bcbec4;}
+.s1 { color: #cf8e6d;}
+.s2 { color: #bcbec4;}
+.s3 { color: #7a7e85;}
+.s4 { color: #6aab73;}
+.s5 { color: #2aacb8;}
+.ls0 { height: 1px; border-width: 0; color: #43454a; background-color:#43454a}
+</style>
+</head>
+<body bgcolor="#1e1f22">
+<table CELLSPACING=0 CELLPADDING=5 COLS=1 WIDTH="100%" BGCOLOR="#606060" >
+<tr><td><center>
+<font face="Arial, Helvetica" color="#000000">
+OutlierRemoval_Final.ipynb</font>
+</center></td></tr></table>
+<pre><span class="s0">#%% 
+</span><span class="s1">import </span><span class="s0">collections</span>
+<span class="s1">import </span><span class="s0">pandas </span><span class="s1">as </span><span class="s0">pd</span>
+<span class="s1">import </span><span class="s0">numpy </span><span class="s1">as </span><span class="s0">np</span>
+<span class="s1">import </span><span class="s0">matplotlib</span><span class="s2">.</span><span class="s0">pyplot </span><span class="s1">as </span><span class="s0">plt</span>
+<span class="s1">import </span><span class="s0">time</span>
+<span class="s1">from </span><span class="s0">itertools </span><span class="s1">import </span><span class="s0">chain</span>
+<span class="s1">from </span><span class="s0">sklearn</span><span class="s2">.</span><span class="s0">linear_model </span><span class="s1">import </span><span class="s0">LinearRegression</span>
+<span class="s1">import </span><span class="s0">os</span>
+<span class="s1">import </span><span class="s0">logging</span><hr class="ls0"><span class="s0">#%% 
+</span><span class="s1">from </span><span class="s0">utils</span><span class="s2">.</span><span class="s0">DetectionTools </span><span class="s1">import </span><span class="s0">remove_outliers_by_region</span>
+<span class="s1">from </span><span class="s0">utils</span><span class="s2">.</span><span class="s0">DetectionTools </span><span class="s1">import </span><span class="s0">sanitize_response_name</span>
+<span class="s1">from </span><span class="s0">utils</span><span class="s2">.</span><span class="s0">DetectionTools </span><span class="s1">import </span><span class="s0">left_derivatives</span>
+<span class="s1">from </span><span class="s0">utils</span><span class="s2">.</span><span class="s0">DetectionTools </span><span class="s1">import </span><span class="s0">merge_close_points</span>
+<span class="s1">from </span><span class="s0">utils</span><span class="s2">.</span><span class="s0">DetectionTools </span><span class="s1">import </span><span class="s0">get_region</span><hr class="ls0"><span class="s0">#%% md
+# Indicate the path to your data file here <hr class="ls0">#%% 
+</span><span class="s3"># Make sure to change this path to the location of your data file</span>
+<span class="s3"># and that the there are single quotes around the path.</span>
+<span class="s0">file_name </span><span class="s2">= </span><span class="s4">'Sample A_Pt-Stds-070325_modified_july_9th.csv'</span>
+<span class="s0">path_to_data </span><span class="s2">= </span><span class="s4">f'./data/</span><span class="s1">{</span><span class="s0">file_name</span><span class="s1">}</span><span class="s4">'</span><hr class="ls0"><span class="s0">#%% 
+output_path </span><span class="s2">= </span><span class="s4">'./output/'</span><hr class="ls0"><span class="s0">#%% 
+</span><span class="s3"># Import data</span>
+<span class="s0">df </span><span class="s2">= </span><span class="s0">pd</span><span class="s2">.</span><span class="s0">read_csv</span><span class="s2">(</span><span class="s0">path_to_data</span><span class="s2">)</span>
+<span class="s0">t </span><span class="s2">= </span><span class="s0">df</span><span class="s2">[</span><span class="s4">'Time'</span><span class="s2">]</span>
+<span class="s0">df</span><hr class="ls0"><span class="s0">#%% md 
+# Select the response column index 
+### where 1 is the first column after 'Time', 2 is the second, etc. <hr class="ls0">#%% 
+response_index </span><span class="s2">= </span><span class="s5">2 </span><span class="s3"># Change this to select the response column</span><hr class="ls0"><span class="s0">#%% 
+</span><span class="s3"># set the response data</span>
+<span class="s1">if not </span><span class="s0">df</span><span class="s2">.</span><span class="s0">columns</span><span class="s2">.</span><span class="s0">empty</span><span class="s2">:</span>
+    <span class="s0">cols_to_drop </span><span class="s2">= []</span>
+    <span class="s1">if </span><span class="s4">'Time' </span><span class="s1">in </span><span class="s0">df</span><span class="s2">.</span><span class="s0">columns</span><span class="s2">:</span>
+        <span class="s0">cols_to_drop</span><span class="s2">.</span><span class="s0">append</span><span class="s2">(</span><span class="s4">'Time'</span><span class="s2">)</span>
+    <span class="s1">if </span><span class="s4">'Replicate' </span><span class="s1">in </span><span class="s0">df</span><span class="s2">.</span><span class="s0">columns</span><span class="s2">:</span>
+        <span class="s0">cols_to_drop</span><span class="s2">.</span><span class="s0">append</span><span class="s2">(</span><span class="s4">'Replicate'</span><span class="s2">)</span>
+    <span class="s1">if </span><span class="s4">'Reading' </span><span class="s1">in </span><span class="s0">df</span><span class="s2">.</span><span class="s0">columns</span><span class="s2">:</span>
+        <span class="s0">cols_to_drop</span><span class="s2">.</span><span class="s0">append</span><span class="s2">(</span><span class="s4">'Reading'</span><span class="s2">)</span>
+
+    <span class="s0">responses </span><span class="s2">= </span><span class="s0">df</span><span class="s2">.</span><span class="s0">drop</span><span class="s2">(</span><span class="s0">columns</span><span class="s2">=</span><span class="s0">cols_to_drop</span><span class="s2">)</span>
+    <span class="s1">if </span><span class="s0">responses</span><span class="s2">.</span><span class="s0">empty </span><span class="s1">and not </span><span class="s0">df</span><span class="s2">.</span><span class="s0">empty</span><span class="s2">: </span><span class="s3"># Check if all columns were dropped, and df wasn't empty initially</span>
+        <span class="s1">raise </span><span class="s0">ValueError</span><span class="s2">(</span><span class="s4">&quot;All columns were identified as non-response columns. No response data left.&quot;</span><span class="s2">)</span>
+<span class="s1">else</span><span class="s2">:</span>
+    <span class="s1">raise </span><span class="s0">ValueError</span><span class="s2">(</span><span class="s4">&quot;DataFrame has no columns.&quot;</span><span class="s2">)</span>
+
+<span class="s0">response </span><span class="s2">= </span><span class="s0">responses</span><span class="s2">.</span><span class="s0">columns</span><span class="s2">[</span><span class="s0">response_index</span><span class="s2">-</span><span class="s5">1</span><span class="s2">]</span>
+<span class="s0">response_data </span><span class="s2">= </span><span class="s0">df</span><span class="s2">[</span><span class="s0">response</span><span class="s2">]</span><hr class="ls0"><span class="s0">#%% 
+</span><span class="s3"># creat output folder</span>
+<span class="s0">os</span><span class="s2">.</span><span class="s0">makedirs</span><span class="s2">(</span><span class="s4">f'</span><span class="s1">{</span><span class="s0">output_path</span><span class="s1">}</span><span class="s4">'</span><span class="s2">, </span><span class="s0">exist_ok</span><span class="s2">=</span><span class="s1">True</span><span class="s2">)</span>
+
+<span class="s3">#create dataset path</span>
+<span class="s0">dataset_name </span><span class="s2">= </span><span class="s0">path_to_data</span><span class="s2">.</span><span class="s0">split</span><span class="s2">(</span><span class="s4">'/'</span><span class="s2">)[-</span><span class="s5">1</span><span class="s2">].</span><span class="s0">split</span><span class="s2">(</span><span class="s4">'.'</span><span class="s2">)[</span><span class="s5">0</span><span class="s2">]</span>
+<span class="s0">dataset_path </span><span class="s2">= </span><span class="s4">f'</span><span class="s1">{</span><span class="s0">output_path</span><span class="s1">}</span><span class="s4">/</span><span class="s1">{</span><span class="s0">dataset_name</span><span class="s1">}</span><span class="s4">'</span>
+
+<span class="s0">os</span><span class="s2">.</span><span class="s0">makedirs</span><span class="s2">(</span><span class="s0">dataset_path</span><span class="s2">, </span><span class="s0">exist_ok</span><span class="s2">=</span><span class="s1">True</span><span class="s2">)</span><hr class="ls0"><span class="s0">#%% 
+safe_name </span><span class="s2">= </span><span class="s0">sanitize_response_name</span><span class="s2">(</span><span class="s0">response</span><span class="s2">)</span>
+<span class="s0">figure_dir </span><span class="s2">= </span><span class="s4">f'</span><span class="s1">{</span><span class="s0">dataset_path</span><span class="s1">}</span><span class="s4">/figures/</span><span class="s1">{</span><span class="s0">safe_name</span><span class="s1">}</span><span class="s4">'</span>
+<span class="s0">os</span><span class="s2">.</span><span class="s0">makedirs</span><span class="s2">(</span><span class="s0">figure_dir</span><span class="s2">, </span><span class="s0">exist_ok</span><span class="s2">=</span><span class="s1">True</span><span class="s2">)</span><hr class="ls0"><span class="s0">#%% 
+</span><span class="s3"># Identifying shifts with k-means</span>
+<span class="s0">X </span><span class="s2">= </span><span class="s0">collections</span><span class="s2">.</span><span class="s0">deque</span><span class="s2">(</span><span class="s0">t</span><span class="s2">)</span>
+<span class="s0">Y </span><span class="s2">= </span><span class="s0">collections</span><span class="s2">.</span><span class="s0">deque</span><span class="s2">(</span><span class="s0">response_data</span><span class="s2">)</span><hr class="ls0"><span class="s0">#%% 
+</span><span class="s3"># Normalize time</span>
+<span class="s0">df</span><span class="s2">[</span><span class="s4">'Time'</span><span class="s2">] = </span><span class="s0">df</span><span class="s2">[</span><span class="s4">'Time'</span><span class="s2">] - </span><span class="s0">df</span><span class="s2">[</span><span class="s4">'Time'</span><span class="s2">].</span><span class="s0">min</span><span class="s2">()</span>
+<span class="s0">df </span><span class="s2">= </span><span class="s0">df</span><span class="s2">.</span><span class="s0">loc</span><span class="s2">[:, </span><span class="s0">df</span><span class="s2">.</span><span class="s0">columns</span><span class="s2">.</span><span class="s0">intersection</span><span class="s2">([</span><span class="s4">'Time'</span><span class="s2">,</span><span class="s4">f'</span><span class="s1">{</span><span class="s0">response</span><span class="s1">}</span><span class="s4">'</span><span class="s2">])]</span>
+<span class="s0">df_response_idxMax </span><span class="s2">= </span><span class="s0">df</span><span class="s2">.</span><span class="s0">idxmax</span><span class="s2">()[</span><span class="s0">response</span><span class="s2">]</span>
+<span class="s0">df </span><span class="s2">= </span><span class="s0">df</span><span class="s2">.</span><span class="s0">iloc</span><span class="s2">[:</span><span class="s0">df_response_idxMax</span><span class="s2">+</span><span class="s5">1</span><span class="s2">]</span>
+
+<span class="s0">df</span><hr class="ls0"><span class="s0">#%% 
+</span><span class="s2">%</span><span class="s0">matplotlib qt</span>
+
+<span class="s0">clicked_coordinates </span><span class="s2">= </span><span class="s1">None </span><span class="s3"># Variable to store the click location</span>
+<span class="s0">left_derivatives_df </span><span class="s2">= </span><span class="s0">left_derivatives</span><span class="s2">(</span><span class="s0">df</span><span class="s2">[</span><span class="s4">'Time'</span><span class="s2">].</span><span class="s0">to_numpy</span><span class="s2">(), </span><span class="s0">df</span><span class="s2">[</span><span class="s0">response</span><span class="s2">].</span><span class="s0">to_numpy</span><span class="s2">())</span>
+
+
+<span class="s1">def </span><span class="s0">onclick</span><span class="s2">(</span><span class="s0">event</span><span class="s2">):</span>
+    <span class="s1">global </span><span class="s0">clicked_coordinates </span><span class="s3"># Declare it global to modify the outside variable</span>
+    <span class="s1">if </span><span class="s0">event</span><span class="s2">.</span><span class="s0">xdata </span><span class="s1">is not None and </span><span class="s0">event</span><span class="s2">.</span><span class="s0">ydata </span><span class="s1">is not None</span><span class="s2">:</span>
+        <span class="s0">clicked_coordinates </span><span class="s2">= (</span><span class="s0">event</span><span class="s2">.</span><span class="s0">xdata</span><span class="s2">, </span><span class="s0">event</span><span class="s2">.</span><span class="s0">ydata</span><span class="s2">)</span>
+        <span class="s0">logging</span><span class="s2">.</span><span class="s0">info</span><span class="s2">(</span><span class="s4">f&quot;Clicked at data coordinates: x=</span><span class="s1">{</span><span class="s0">event</span><span class="s2">.</span><span class="s0">xdata</span><span class="s1">}</span><span class="s4">, y=</span><span class="s1">{</span><span class="s0">event</span><span class="s2">.</span><span class="s0">ydata</span><span class="s1">}</span><span class="s4">&quot;</span><span class="s2">)</span>
+        <span class="s0">plt</span><span class="s2">.</span><span class="s0">close</span><span class="s2">(</span><span class="s0">fig</span><span class="s2">) </span><span class="s3"># Close the window</span>
+
+    <span class="s1">else</span><span class="s2">:</span>
+        <span class="s0">logging</span><span class="s2">.</span><span class="s0">info</span><span class="s2">(</span><span class="s4">&quot;Click was outside the plot area.&quot;</span><span class="s2">)</span>
+
+<span class="s0">fig</span><span class="s2">, </span><span class="s0">ax1 </span><span class="s2">= </span><span class="s0">plt</span><span class="s2">.</span><span class="s0">subplots</span><span class="s2">(</span><span class="s0">figsize</span><span class="s2">=(</span><span class="s5">18</span><span class="s2">, </span><span class="s5">12</span><span class="s2">), </span><span class="s0">layout</span><span class="s2">=</span><span class="s4">'constrained'</span><span class="s2">) </span><span class="s3"># Increased figure size for clarity</span>
+<span class="s0">plt</span><span class="s2">.</span><span class="s0">scatter</span><span class="s2">(</span><span class="s0">df</span><span class="s2">[</span><span class="s4">'Time'</span><span class="s2">], </span><span class="s0">df</span><span class="s2">[</span><span class="s0">response</span><span class="s2">])</span>
+
+<span class="s3"># Save derivative and data pllot</span>
+<span class="s0">plt</span><span class="s2">.</span><span class="s0">savefig</span><span class="s2">(</span><span class="s4">f'</span><span class="s1">{</span><span class="s0">output_path</span><span class="s1">}</span><span class="s4">/</span><span class="s1">{</span><span class="s0">dataset_name</span><span class="s1">}</span><span class="s4">/Derivative-Data-Plot'</span><span class="s2">, </span><span class="s0">bbox_inches</span><span class="s2">=</span><span class="s4">'tight'</span><span class="s2">,</span><span class="s0">dpi</span><span class="s2">=</span><span class="s5">300</span><span class="s2">)</span>
+
+<span class="s0">cid </span><span class="s2">= </span><span class="s0">fig</span><span class="s2">.</span><span class="s0">canvas</span><span class="s2">.</span><span class="s0">mpl_connect</span><span class="s2">(</span><span class="s4">'button_press_event'</span><span class="s2">, </span><span class="s0">onclick</span><span class="s2">)</span>
+
+<span class="s3"># Now your loop can run while the plot is interactive</span>
+<span class="s0">logging</span><span class="s2">.</span><span class="s0">info</span><span class="s2">(</span><span class="s4">&quot;Waiting for a click...&quot;</span><span class="s2">)</span>
+<span class="s0">start_time </span><span class="s2">= </span><span class="s0">time</span><span class="s2">.</span><span class="s0">time</span><span class="s2">()</span>
+<span class="s0">timeout_seconds </span><span class="s2">= </span><span class="s5">1000 </span><span class="s3"># Your desired timeout</span>
+
+<span class="s1">while True</span><span class="s2">:</span>
+    <span class="s1">if </span><span class="s0">clicked_coordinates</span><span class="s2">:</span>
+        <span class="s0">logging</span><span class="s2">.</span><span class="s0">info</span><span class="s2">(</span><span class="s4">f&quot;Click detected at: </span><span class="s1">{</span><span class="s0">clicked_coordinates</span><span class="s1">}</span><span class="s4">&quot;</span><span class="s2">)</span>
+        <span class="s1">break</span>
+    <span class="s1">if </span><span class="s2">(</span><span class="s0">time</span><span class="s2">.</span><span class="s0">time</span><span class="s2">() - </span><span class="s0">start_time</span><span class="s2">) &gt; </span><span class="s0">timeout_seconds</span><span class="s2">:</span>
+        <span class="s0">logging</span><span class="s2">.</span><span class="s0">info</span><span class="s2">(</span><span class="s4">'Timed out. No click detected within the specified time.'</span><span class="s2">)</span>
+        <span class="s1">break</span>
+    <span class="s0">plt</span><span class="s2">.</span><span class="s0">pause</span><span class="s2">(</span><span class="s5">0.1</span><span class="s2">) </span><span class="s3"># Process GUI events for a short period</span>
+                   <span class="s3"># This is crucial for interactive mode to work</span>
+<span class="s0">plt</span><span class="s2">.</span><span class="s0">ioff</span><span class="s2">() </span><span class="s3"># Turn off interactive mode</span>
+<span class="s0">plt</span><span class="s2">.</span><span class="s0">show</span><span class="s2">() </span><span class="s3"># Keep the plot open until manually closed after the loop</span><hr class="ls0"><span class="s0">#%% 
+</span><span class="s2">%</span><span class="s0">matplotlib inline</span>
+
+<span class="s3"># After the window is closed, you can access the stored coordinates</span>
+<span class="s1">if </span><span class="s0">clicked_coordinates</span><span class="s2">:</span>
+    <span class="s0">logging</span><span class="s2">.</span><span class="s0">info</span><span class="s2">(</span><span class="s4">f&quot;The final stored coordinates are: </span><span class="s1">{</span><span class="s0">clicked_coordinates</span><span class="s1">}</span><span class="s4">&quot;</span><span class="s2">)</span>
+<span class="s1">else</span><span class="s2">:</span>
+    <span class="s0">logging</span><span class="s2">.</span><span class="s0">info</span><span class="s2">(</span><span class="s4">&quot;No valid click was registered before the window closed.&quot;</span><span class="s2">)</span>
+
+<span class="s0">first_region </span><span class="s2">= (</span><span class="s0">np</span><span class="s2">.</span><span class="s0">array</span><span class="s2">([</span><span class="s5">0</span><span class="s2">]).</span><span class="s0">astype</span><span class="s2">(</span><span class="s0">float</span><span class="s2">)[</span><span class="s5">0</span><span class="s2">], </span><span class="s0">clicked_coordinates</span><span class="s2">[</span><span class="s5">0</span><span class="s2">])</span>
+<span class="s0">first_region</span><hr class="ls0"><span class="s0">#%% 
+</span><span class="s3"># Get left derivatives</span>
+<span class="s0">left_derivatieves_df </span><span class="s2">= </span><span class="s0">left_derivatives_df</span><span class="s2">[</span><span class="s0">left_derivatives_df</span><span class="s2">[</span><span class="s4">'Time'</span><span class="s2">] &gt; </span><span class="s0">first_region</span><span class="s2">[</span><span class="s5">1</span><span class="s2">]]</span>
+<span class="s0">left_derivatives_df</span><span class="s2">.</span><span class="s0">set_index</span><span class="s2">([</span><span class="s4">'Time'</span><span class="s2">], </span><span class="s0">inplace</span><span class="s2">=</span><span class="s1">True</span><span class="s2">)</span>
+<span class="s0">left_derivatives_df</span><hr class="ls0"><span class="s0">#%% 
+</span><span class="s3"># Define the first region</span>
+<span class="s0">mask1 </span><span class="s2">= (</span><span class="s0">left_derivatives_df</span><span class="s2">[</span><span class="s4">'Left_Derivative'</span><span class="s2">] &gt; </span><span class="s0">left_derivatives_df</span><span class="s2">[</span><span class="s4">'Y'</span><span class="s2">])</span>
+<span class="s0">shifts </span><span class="s2">= </span><span class="s0">left_derivatives_df</span><span class="s2">[</span><span class="s0">mask1</span><span class="s2">]</span>
+<span class="s0">mask2 </span><span class="s2">= (</span><span class="s0">shifts</span><span class="s2">.</span><span class="s0">index </span><span class="s2">&gt; </span><span class="s0">first_region</span><span class="s2">[</span><span class="s5">1</span><span class="s2">])</span>
+<span class="s0">shifts </span><span class="s2">= </span><span class="s0">shifts</span><span class="s2">[</span><span class="s0">mask2</span><span class="s2">]</span>
+
+<span class="s0">shifts </span><span class="s2">= </span><span class="s0">list</span><span class="s2">(</span><span class="s0">shifts</span><span class="s2">.</span><span class="s0">index</span><span class="s2">)</span>
+
+<hr class="ls0"><span class="s0">#%% 
+</span><span class="s1">def </span><span class="s0">get_detected_intervals</span><span class="s2">(</span><span class="s0">shifts_index</span><span class="s2">: </span><span class="s0">list</span><span class="s2">):</span>
+    <span class="s0">result </span><span class="s2">= [</span><span class="s0">first_region</span><span class="s2">, (</span><span class="s0">first_region</span><span class="s2">[</span><span class="s5">1</span><span class="s2">], </span><span class="s0">shifts_index</span><span class="s2">[</span><span class="s5">0</span><span class="s2">])]</span>
+    <span class="s1">for </span><span class="s0">i </span><span class="s1">in </span><span class="s0">range</span><span class="s2">(</span><span class="s0">len</span><span class="s2">(</span><span class="s0">shifts_index</span><span class="s2">)-</span><span class="s5">1</span><span class="s2">):</span>
+        <span class="s0">start_p </span><span class="s2">= </span><span class="s0">shifts_index</span><span class="s2">[</span><span class="s0">i</span><span class="s2">]</span>
+        <span class="s0">next_p </span><span class="s2">= </span><span class="s0">shifts_index</span><span class="s2">[</span><span class="s0">i</span><span class="s2">+</span><span class="s5">1</span><span class="s2">]</span>
+        <span class="s0">result</span><span class="s2">.</span><span class="s0">append</span><span class="s2">((</span><span class="s0">start_p</span><span class="s2">, </span><span class="s0">next_p</span><span class="s2">))</span>
+    <span class="s1">return </span><span class="s0">result</span>
+
+<span class="s0">detected_intervals </span><span class="s2">= </span><span class="s0">get_detected_intervals</span><span class="s2">(</span><span class="s0">shifts_index</span><span class="s2">=</span><span class="s0">shifts</span><span class="s2">)</span>
+<span class="s0">detected_intervals</span><span class="s2">.</span><span class="s0">append</span><span class="s2">((</span><span class="s0">detected_intervals</span><span class="s2">[-</span><span class="s5">1</span><span class="s2">][</span><span class="s5">1</span><span class="s2">], </span><span class="s0">df</span><span class="s2">[</span><span class="s4">'Time'</span><span class="s2">].</span><span class="s0">max</span><span class="s2">()))</span>
+<span class="s0">detected_intervals</span>
+<hr class="ls0"><span class="s0">#%% md 
+# Select a p value here <hr class="ls0">#%% 
+p </span><span class="s2">= </span><span class="s5">90 </span><span class="s3"># Change this to select the p value for merging close points</span><hr class="ls0"><span class="s0">#%% 
+merged_points </span><span class="s2">= </span><span class="s0">merge_close_points</span><span class="s2">(</span><span class="s0">df</span><span class="s2">=</span><span class="s0">df</span><span class="s2">, </span><span class="s0">regions</span><span class="s2">=</span><span class="s0">detected_intervals</span><span class="s2">, </span><span class="s0">p</span><span class="s2">=</span><span class="s0">p</span><span class="s2">, </span><span class="s0">response</span><span class="s2">=</span><span class="s0">response</span><span class="s2">)</span>
+<span class="s0">merged_points_list </span><span class="s2">= </span><span class="s0">sorted</span><span class="s2">(</span><span class="s0">list</span><span class="s2">(</span><span class="s0">set</span><span class="s2">(</span><span class="s0">tuple</span><span class="s2">(</span><span class="s0">chain</span><span class="s2">.</span><span class="s0">from_iterable</span><span class="s2">(</span><span class="s0">merged_points</span><span class="s2">)))))</span>
+<span class="s0">merged_points</span><hr class="ls0"><span class="s0">#%% 
+</span><span class="s1">def </span><span class="s0">get_detected_intervals</span><span class="s2">(</span><span class="s0">shifts_index</span><span class="s2">: </span><span class="s0">list</span><span class="s2">):</span>
+    <span class="s0">result </span><span class="s2">=[]</span>
+    <span class="s1">for </span><span class="s0">i </span><span class="s1">in </span><span class="s0">range</span><span class="s2">(</span><span class="s0">len</span><span class="s2">(</span><span class="s0">shifts_index</span><span class="s2">)-</span><span class="s5">1</span><span class="s2">):</span>
+        <span class="s0">start_p </span><span class="s2">= </span><span class="s0">shifts_index</span><span class="s2">[</span><span class="s0">i</span><span class="s2">]</span>
+        <span class="s0">next_p </span><span class="s2">= </span><span class="s0">shifts_index</span><span class="s2">[</span><span class="s0">i</span><span class="s2">+</span><span class="s5">1</span><span class="s2">]</span>
+        <span class="s0">result</span><span class="s2">.</span><span class="s0">append</span><span class="s2">((</span><span class="s0">start_p</span><span class="s2">, </span><span class="s0">next_p</span><span class="s2">))</span>
+    <span class="s1">return </span><span class="s0">result</span>
+
+<span class="s0">detected_intervals </span><span class="s2">= </span><span class="s0">get_detected_intervals</span><span class="s2">(</span><span class="s0">shifts_index</span><span class="s2">=</span><span class="s0">merged_points_list</span><span class="s2">)</span>
+<span class="s0">detected_intervals</span>
+
+<hr class="ls0"><span class="s0">#%% md 
+## Final Plot <hr class="ls0">#%% 
+fig</span><span class="s2">, </span><span class="s0">ax1 </span><span class="s2">= </span><span class="s0">plt</span><span class="s2">.</span><span class="s0">subplots</span><span class="s2">(</span><span class="s0">figsize</span><span class="s2">=(</span><span class="s5">18</span><span class="s2">, </span><span class="s5">12</span><span class="s2">), </span><span class="s0">layout</span><span class="s2">=</span><span class="s4">'constrained'</span><span class="s2">)</span>
+
+<span class="s3"># Plot original data and derivatives</span>
+<span class="s0">ax1</span><span class="s2">.</span><span class="s0">scatter</span><span class="s2">(</span><span class="s0">left_derivatives_df</span><span class="s2">.</span><span class="s0">index</span><span class="s2">, </span><span class="s0">left_derivatives_df</span><span class="s2">[</span><span class="s4">'Left_Derivative'</span><span class="s2">], </span><span class="s0">label</span><span class="s2">=</span><span class="s4">'Left Derivative'</span><span class="s2">)</span>
+<span class="s0">ax1</span><span class="s2">.</span><span class="s0">scatter</span><span class="s2">(</span><span class="s0">df</span><span class="s2">[</span><span class="s4">'Time'</span><span class="s2">], </span><span class="s0">df</span><span class="s2">[</span><span class="s0">response</span><span class="s2">], </span><span class="s0">label</span><span class="s2">=</span><span class="s4">'Response Value'</span><span class="s2">)</span>
+
+<span class="s3"># Plot the original 'shifts' as red 'x' marks</span>
+<span class="s0">ax1</span><span class="s2">.</span><span class="s0">scatter</span><span class="s2">(</span><span class="s0">shifts</span><span class="s2">,</span>
+            <span class="s0">left_derivatives_df</span><span class="s2">.</span><span class="s0">loc</span><span class="s2">[</span><span class="s0">shifts</span><span class="s2">, </span><span class="s4">'Left_Derivative'</span><span class="s2">],</span>
+            <span class="s0">marker</span><span class="s2">=</span><span class="s4">'x'</span><span class="s2">, </span><span class="s0">color</span><span class="s2">=</span><span class="s4">'red'</span><span class="s2">, </span><span class="s0">s</span><span class="s2">=</span><span class="s5">150</span><span class="s2">, </span><span class="s0">zorder</span><span class="s2">=</span><span class="s5">4</span><span class="s2">, </span><span class="s0">label</span><span class="s2">=</span><span class="s4">'Original Shifts (Derivative &gt; Y)'</span><span class="s2">)</span>
+
+
+<span class="s1">for </span><span class="s0">i</span><span class="s2">, (</span><span class="s0">x0</span><span class="s2">, </span><span class="s0">x1</span><span class="s2">) </span><span class="s1">in </span><span class="s0">enumerate</span><span class="s2">(</span><span class="s0">detected_intervals</span><span class="s2">):</span>
+    <span class="s3"># Plot the detected intervals as blue rectangles</span>
+    <span class="s0">original_region_data </span><span class="s2">= </span><span class="s0">get_region</span><span class="s2">(</span><span class="s0">df</span><span class="s2">=</span><span class="s0">df</span><span class="s2">, </span><span class="s0">start_time</span><span class="s2">=</span><span class="s0">x0</span><span class="s2">, </span><span class="s0">end_time</span><span class="s2">=</span><span class="s0">x1</span><span class="s2">)</span>
+    <span class="s0">print</span><span class="s2">(</span><span class="s0">original_region_data</span><span class="s2">)</span>
+
+<span class="s0">ax1</span><span class="s2">.</span><span class="s0">set_xlabel</span><span class="s2">(</span><span class="s4">'Time'</span><span class="s2">)</span>
+<span class="s0">ax1</span><span class="s2">.</span><span class="s0">set_ylabel</span><span class="s2">(</span><span class="s4">'Value'</span><span class="s2">)</span>
+<span class="s0">ax1</span><span class="s2">.</span><span class="s0">legend</span><span class="s2">()</span>
+<span class="s0">plt</span><span class="s2">.</span><span class="s0">savefig</span><span class="s2">(</span><span class="s4">f'</span><span class="s1">{</span><span class="s0">figure_dir</span><span class="s1">}</span><span class="s4">/Regional-Final.png'</span><span class="s2">,</span><span class="s0">bbox_inches</span><span class="s2">=</span><span class="s4">'tight'</span><span class="s2">,</span><span class="s0">dpi</span><span class="s2">=</span><span class="s5">300</span><span class="s2">)</span>
+<span class="s0">plt</span><span class="s2">.</span><span class="s0">show</span><span class="s2">()</span>
+<hr class="ls0"><span class="s0">#%% 
+regional_means </span><span class="s2">= []</span>
+
+<span class="s0">num_regions </span><span class="s2">= </span><span class="s0">len</span><span class="s2">(</span><span class="s0">detected_intervals</span><span class="s2">)</span>
+<span class="s0">ncols </span><span class="s2">= </span><span class="s5">4 </span><span class="s3"># You can change the number of columns</span>
+<span class="s0">nrows </span><span class="s2">= (</span><span class="s0">num_regions </span><span class="s2">+ </span><span class="s0">ncols </span><span class="s2">- </span><span class="s5">1</span><span class="s2">) // </span><span class="s0">ncols</span>
+
+<span class="s0">offset </span><span class="s2">= </span><span class="s5">15 </span><span class="s3"># 15 seconds offset to </span>
+
+<span class="s0">final_df </span><span class="s2">= </span><span class="s0">pd</span><span class="s2">.</span><span class="s0">DataFrame</span><span class="s2">()</span>
+
+
+<span class="s0">fig</span><span class="s2">, </span><span class="s0">axes </span><span class="s2">= </span><span class="s0">plt</span><span class="s2">.</span><span class="s0">subplots</span><span class="s2">(</span><span class="s0">nrows</span><span class="s2">=</span><span class="s0">nrows</span><span class="s2">, </span><span class="s0">ncols</span><span class="s2">=</span><span class="s0">ncols</span><span class="s2">, </span><span class="s0">figsize</span><span class="s2">=(</span><span class="s5">24</span><span class="s2">, </span><span class="s5">4 </span><span class="s2">* </span><span class="s0">nrows</span><span class="s2">))</span>
+<span class="s0">axes_flat </span><span class="s2">= </span><span class="s0">axes</span><span class="s2">.</span><span class="s0">flatten</span><span class="s2">() </span><span class="s3"># Flatten the 2D axes array for easier iteration</span>
+<span class="s1">for </span><span class="s0">i</span><span class="s2">, (</span><span class="s0">x0</span><span class="s2">, </span><span class="s0">x1</span><span class="s2">) </span><span class="s1">in </span><span class="s0">enumerate</span><span class="s2">(</span><span class="s0">detected_intervals</span><span class="s2">):</span>
+    <span class="s3"># Get the current Axes object for this iteration from the flattened array</span>
+    <span class="s1">if </span><span class="s0">i </span><span class="s2">&lt; </span><span class="s0">len</span><span class="s2">(</span><span class="s0">axes_flat</span><span class="s2">):</span>
+        <span class="s0">current_ax </span><span class="s2">= </span><span class="s0">axes_flat</span><span class="s2">[</span><span class="s0">i</span><span class="s2">]</span>
+    <span class="s1">else</span><span class="s2">:</span>
+        <span class="s3"># This case should ideally not happen if nrows is calculated correctly,</span>
+        <span class="s3"># but provides a safeguard if more plots are attempted than subplots available.</span>
+        <span class="s0">logging</span><span class="s2">.</span><span class="s0">warning</span><span class="s2">(</span><span class="s4">f&quot; Not enough subplots for region </span><span class="s1">{</span><span class="s0">i</span><span class="s2">+</span><span class="s5">1</span><span class="s1">}</span><span class="s4">. Skipping plot.&quot;</span><span class="s2">)</span>
+        <span class="s1">continue</span>
+    
+
+    <span class="s3"># Call your outlier removal function for the current region</span>
+    <span class="s0">original_region_data </span><span class="s2">= </span><span class="s0">get_region</span><span class="s2">(</span><span class="s0">df</span><span class="s2">=</span><span class="s0">df</span><span class="s2">, </span><span class="s0">start_time</span><span class="s2">=</span><span class="s0">x0</span><span class="s2">, </span><span class="s0">end_time</span><span class="s2">=</span><span class="s0">x1</span><span class="s2">)</span>
+    <span class="s0">Y_prime </span><span class="s2">= </span><span class="s0">remove_outliers_by_region</span><span class="s2">(</span><span class="s0">R</span><span class="s2">=(</span><span class="s0">x0 </span><span class="s2">+ </span><span class="s0">offset</span><span class="s2">, </span><span class="s0">x1 </span><span class="s2">- </span><span class="s0">offset</span><span class="s2">), </span><span class="s0">response_column_name</span><span class="s2">=</span><span class="s0">response</span><span class="s2">, </span><span class="s0">Y</span><span class="s2">=</span><span class="s0">df</span><span class="s2">)</span>
+
+    <span class="s3"># logging.info(f'New Region {i+1}: ({val['Start'] + offset}, {val['End'] - offset})')</span>
+
+    <span class="s3"># Plot the results on the current subplot</span>
+    <span class="s1">if not </span><span class="s0">Y_prime</span><span class="s2">.</span><span class="s0">empty</span><span class="s2">:</span>
+        <span class="s3"># Plot the data after outlier removal</span>
+        <span class="s0">current_ax</span><span class="s2">.</span><span class="s0">plot</span><span class="s2">(</span><span class="s0">Y_prime</span><span class="s2">[</span><span class="s4">'Time'</span><span class="s2">], </span><span class="s0">Y_prime</span><span class="s2">[</span><span class="s0">response</span><span class="s2">], </span><span class="s0">label</span><span class="s2">=</span><span class="s4">'Outliers Removed'</span><span class="s2">, </span><span class="s0">color</span><span class="s2">=</span><span class="s4">'blue'</span><span class="s2">, </span><span class="s0">alpha</span><span class="s2">=</span><span class="s5">0.8</span><span class="s2">)</span>
+        
+        <span class="s3"># Plot original data for comparison (only within the current region)</span>
+
+        
+        <span class="s0">current_ax</span><span class="s2">.</span><span class="s0">plot</span><span class="s2">(</span><span class="s0">original_region_data</span><span class="s2">[</span><span class="s4">'Time'</span><span class="s2">], </span><span class="s0">original_region_data</span><span class="s2">[</span><span class="s0">response</span><span class="s2">],</span>
+                        <span class="s4">'--'</span><span class="s2">, </span><span class="s0">color</span><span class="s2">=</span><span class="s4">'yellow'</span><span class="s2">, </span><span class="s0">alpha</span><span class="s2">=</span><span class="s5">0.7</span><span class="s2">, </span><span class="s0">label</span><span class="s2">=</span><span class="s4">'Original Data'</span><span class="s2">)</span>
+        
+        <span class="s0">region_mean </span><span class="s2">= </span><span class="s0">Y_prime</span><span class="s2">[</span><span class="s0">response</span><span class="s2">].</span><span class="s0">mean</span><span class="s2">()</span>
+        <span class="s0">original_mean </span><span class="s2">= </span><span class="s0">original_region_data</span><span class="s2">[</span><span class="s0">response</span><span class="s2">].</span><span class="s0">mean</span><span class="s2">()</span>
+        
+        <span class="s0">current_ax</span><span class="s2">.</span><span class="s0">axhline</span><span class="s2">(</span><span class="s0">y</span><span class="s2">=</span><span class="s0">region_mean</span><span class="s2">, </span><span class="s0">color</span><span class="s2">=</span><span class="s4">'#FF69B4'</span><span class="s2">, </span><span class="s0">linestyle</span><span class="s2">=</span><span class="s4">'-.'</span><span class="s2">, </span><span class="s0">label</span><span class="s2">=</span><span class="s4">f'mean=</span><span class="s1">{</span><span class="s0">region_mean</span><span class="s1">}</span><span class="s4">'</span><span class="s2">)</span>
+        <span class="s0">current_ax</span><span class="s2">.</span><span class="s0">axhline</span><span class="s2">(</span><span class="s0">y</span><span class="s2">=</span><span class="s0">original_mean</span><span class="s2">, </span><span class="s0">color</span><span class="s2">=</span><span class="s4">'red'</span><span class="s2">, </span><span class="s0">linestyle</span><span class="s2">=</span><span class="s4">'--'</span><span class="s2">, </span><span class="s0">label</span><span class="s2">=</span><span class="s4">f'original mean=</span><span class="s1">{</span><span class="s0">original_mean</span><span class="s1">}</span><span class="s4">'</span><span class="s2">)</span>
+
+        <span class="s0">regional_means</span><span class="s2">.</span><span class="s0">append</span><span class="s2">(</span><span class="s0">region_mean</span><span class="s2">)</span>
+        
+        <span class="s0">current_ax</span><span class="s2">.</span><span class="s0">legend</span><span class="s2">(</span><span class="s0">fontsize</span><span class="s2">=</span><span class="s4">'small'</span><span class="s2">)</span>
+    <span class="s1">else</span><span class="s2">:</span>
+        <span class="s0">current_ax</span><span class="s2">.</span><span class="s0">text</span><span class="s2">(</span><span class="s5">0.5</span><span class="s2">, </span><span class="s5">0.5</span><span class="s2">, </span><span class="s4">'No Data or Outliers Removed</span><span class="s1">\n</span><span class="s4">for this Region'</span><span class="s2">,</span>
+                        <span class="s0">horizontalalignment</span><span class="s2">=</span><span class="s4">'center'</span><span class="s2">, </span><span class="s0">verticalalignment</span><span class="s2">=</span><span class="s4">'center'</span><span class="s2">,</span>
+                        <span class="s0">transform</span><span class="s2">=</span><span class="s0">current_ax</span><span class="s2">.</span><span class="s0">transAxes</span><span class="s2">, </span><span class="s0">fontsize</span><span class="s2">=</span><span class="s5">10</span><span class="s2">, </span><span class="s0">color</span><span class="s2">=</span><span class="s4">'red'</span><span class="s2">)</span>
+        <span class="s1">continue</span>
+
+    <span class="s3"># Set titles and labels for the current subplot</span>
+    <span class="s0">current_ax</span><span class="s2">.</span><span class="s0">set_title</span><span class="s2">(</span><span class="s4">f'Region </span><span class="s1">{</span><span class="s0">i</span><span class="s2">+</span><span class="s5">1</span><span class="s1">}</span><span class="s4">: </span><span class="s1">{</span><span class="s0">x0</span><span class="s1">} </span><span class="s4">to </span><span class="s1">{</span><span class="s0">x1</span><span class="s1">}</span><span class="s4">'</span><span class="s2">)</span>
+    <span class="s0">current_ax</span><span class="s2">.</span><span class="s0">set_xlabel</span><span class="s2">(</span><span class="s4">'Time (s)'</span><span class="s2">)</span>
+    <span class="s0">current_ax</span><span class="s2">.</span><span class="s0">set_ylabel</span><span class="s2">(</span><span class="s4">f'</span><span class="s1">{</span><span class="s0">response</span><span class="s1">}</span><span class="s4">'</span><span class="s2">)</span>
+    <span class="s0">current_ax</span><span class="s2">.</span><span class="s0">grid</span><span class="s2">(</span><span class="s1">True</span><span class="s2">, </span><span class="s0">linestyle</span><span class="s2">=</span><span class="s4">'--'</span><span class="s2">, </span><span class="s0">alpha</span><span class="s2">=</span><span class="s5">0.6</span><span class="s2">) </span><span class="s3"># Add a grid for better readability</span>
+
+    <span class="s0">final_df </span><span class="s2">= </span><span class="s0">pd</span><span class="s2">.</span><span class="s0">concat</span><span class="s2">([</span><span class="s0">final_df</span><span class="s2">, </span><span class="s0">Y_prime</span><span class="s2">], </span><span class="s0">ignore_index</span><span class="s2">=</span><span class="s1">True</span><span class="s2">)</span>
+
+
+
+<span class="s3"># This prevents empty plots from appearing if your `area_df` has fewer regions than the grid size</span>
+<span class="s1">for </span><span class="s0">j </span><span class="s1">in </span><span class="s0">range</span><span class="s2">(</span><span class="s0">num_regions</span><span class="s2">, </span><span class="s0">len</span><span class="s2">(</span><span class="s0">axes_flat</span><span class="s2">)):</span>
+    <span class="s0">fig</span><span class="s2">.</span><span class="s0">delaxes</span><span class="s2">(</span><span class="s0">axes_flat</span><span class="s2">[</span><span class="s0">j</span><span class="s2">])</span>
+
+<span class="s0">plt</span><span class="s2">.</span><span class="s0">savefig</span><span class="s2">(</span><span class="s4">f'</span><span class="s1">{</span><span class="s0">figure_dir</span><span class="s1">}</span><span class="s4">/regions.png'</span><span class="s2">,</span>
+             <span class="s0">bbox_inches</span><span class="s2">=</span><span class="s4">'tight'</span><span class="s2">,</span>
+             <span class="s0">dpi</span><span class="s2">=</span><span class="s5">300</span><span class="s2">)</span>
+<span class="s0">plt</span><span class="s2">.</span><span class="s0">tight_layout</span><span class="s2">() </span><span class="s3"># Automatically adjust subplot parameters for a tight layout</span>
+<span class="s0">plt</span><span class="s2">.</span><span class="s0">show</span><span class="s2">() </span><span class="s3"># Display the plot</span>
+    
+<span class="s3"># plt.tight_layout()</span>
+<span class="s3"># plt.show()</span><hr class="ls0"><span class="s0">#%% 
+final_df </span><span class="s2">= </span><span class="s0">final_df</span><span class="s2">.</span><span class="s0">sort_index</span><span class="s2">()</span>
+<span class="s0">final_df</span><hr class="ls0"><span class="s0">#%% 
+display</span><span class="s2">(</span><span class="s0">regional_means</span><span class="s2">)</span>
+<span class="s3"># Plot regional means</span>
+<span class="s0">labels </span><span class="s2">= </span><span class="s0">np</span><span class="s2">.</span><span class="s0">array</span><span class="s2">([</span><span class="s5">0</span><span class="s2">,</span><span class="s5">1</span><span class="s2">,</span><span class="s5">2</span><span class="s2">,</span><span class="s5">5</span><span class="s2">,</span><span class="s5">7</span><span class="s2">,</span><span class="s5">9</span><span class="s2">,</span><span class="s5">11</span><span class="s2">])/</span><span class="s5">10</span>
+<span class="s0">data </span><span class="s2">= </span><span class="s0">pd</span><span class="s2">.</span><span class="s0">DataFrame</span><span class="s2">(</span><span class="s0">regional_means</span><span class="s2">, </span><span class="s0">labels</span><span class="s2">)</span>
+
+<span class="s0">fig</span><span class="s2">, </span><span class="s0">ax1 </span><span class="s2">= </span><span class="s0">plt</span><span class="s2">.</span><span class="s0">subplots</span><span class="s2">(</span><span class="s0">figsize</span><span class="s2">=(</span><span class="s5">10</span><span class="s2">, </span><span class="s5">7</span><span class="s2">))</span>
+
+<span class="s3"># Plot the bars</span>
+<span class="s0">ax1</span><span class="s2">.</span><span class="s0">scatter</span><span class="s2">(</span><span class="s0">data</span><span class="s2">.</span><span class="s0">index</span><span class="s2">, </span><span class="s0">data</span><span class="s2">.</span><span class="s0">values</span><span class="s2">)  </span><span class="s3"># Convert index to string for proper label display</span>
+<span class="s0">m</span><span class="s2">,</span><span class="s0">b </span><span class="s2">= </span><span class="s0">np</span><span class="s2">.</span><span class="s0">polyfit</span><span class="s2">(</span><span class="s0">labels</span><span class="s2">, </span><span class="s0">regional_means</span><span class="s2">, </span><span class="s5">1</span><span class="s2">)</span>
+
+<span class="s0">model </span><span class="s2">= </span><span class="s0">LinearRegression</span><span class="s2">()</span>
+
+<span class="s0">X </span><span class="s2">= </span><span class="s0">labels</span><span class="s2">.</span><span class="s0">reshape</span><span class="s2">(-</span><span class="s5">1</span><span class="s2">, </span><span class="s5">1</span><span class="s2">)</span>
+<span class="s0">y </span><span class="s2">= </span><span class="s0">np</span><span class="s2">.</span><span class="s0">array</span><span class="s2">(</span><span class="s0">regional_means</span><span class="s2">)</span>
+
+<span class="s0">model</span><span class="s2">.</span><span class="s0">fit</span><span class="s2">(</span><span class="s0">X</span><span class="s2">,</span><span class="s0">y</span><span class="s2">)</span>
+
+<span class="s0">r_squared </span><span class="s2">= </span><span class="s0">model</span><span class="s2">.</span><span class="s0">score</span><span class="s2">(</span><span class="s0">X</span><span class="s2">,</span><span class="s0">y</span><span class="s2">)</span>
+
+
+<span class="s3"># Find regression equation</span>
+<span class="s1">if </span><span class="s0">b </span><span class="s2">&gt;= </span><span class="s5">0</span><span class="s2">:</span>
+    <span class="s0">line_label </span><span class="s2">= </span><span class="s4">f'y = </span><span class="s1">{</span><span class="s0">m</span><span class="s1">}</span><span class="s4">x + </span><span class="s1">{</span><span class="s0">b</span><span class="s1">}</span><span class="s4">'</span>
+<span class="s1">else</span><span class="s2">:</span>
+    <span class="s0">line_label </span><span class="s2">= </span><span class="s4">f'y = </span><span class="s1">{</span><span class="s0">m</span><span class="s1">}</span><span class="s4">x - </span><span class="s1">{</span><span class="s2">-</span><span class="s0">b</span><span class="s1">}</span><span class="s4">' </span><span class="s3"># Use -b to show a positive number after the minus sign</span>
+
+<span class="s0">ax1</span><span class="s2">.</span><span class="s0">plot</span><span class="s2">(</span><span class="s0">labels</span><span class="s2">, </span><span class="s0">m</span><span class="s2">*</span><span class="s0">labels </span><span class="s2">+ </span><span class="s0">b</span><span class="s2">, </span><span class="s0">color</span><span class="s2">=</span><span class="s4">'red'</span><span class="s2">, </span><span class="s0">label</span><span class="s2">=</span><span class="s4">f'</span><span class="s1">{</span><span class="s0">line_label</span><span class="s1">}</span><span class="s4">, r²=</span><span class="s1">{</span><span class="s0">r_squared</span><span class="s1">}</span><span class="s4">'</span><span class="s2">)</span>
+
+
+<span class="s0">plt</span><span class="s2">.</span><span class="s0">legend</span><span class="s2">()</span>
+
+<span class="s0">ax1</span><span class="s2">.</span><span class="s0">set_xlabel</span><span class="s2">(</span><span class="s4">'Region'</span><span class="s2">)</span>
+<span class="s0">ax1</span><span class="s2">.</span><span class="s0">set_ylabel</span><span class="s2">(</span><span class="s4">f'</span><span class="s1">{</span><span class="s0">response</span><span class="s1">} </span><span class="s4">(mean)'</span><span class="s2">)</span>
+
+
+
+<span class="s0">plt</span><span class="s2">.</span><span class="s0">tight_layout</span><span class="s2">()</span>
+<span class="s0">plt</span><span class="s2">.</span><span class="s0">savefig</span><span class="s2">(</span><span class="s4">f'</span><span class="s1">{</span><span class="s0">figure_dir</span><span class="s1">}</span><span class="s4">/Regression-Plot.png'</span><span class="s2">, </span><span class="s0">bbox_inches</span><span class="s2">=</span><span class="s4">'tight'</span><span class="s2">,</span><span class="s0">dpi</span><span class="s2">=</span><span class="s5">300</span><span class="s2">)</span>
+<span class="s0">plt</span><span class="s2">.</span><span class="s0">show</span><span class="s2">()</span>
+<hr class="ls0"><span class="s0">#%% md 
+$$ \textit{Opus ex amino, } \\ \text{Bhagawat Chapagain} $$</span></pre>
+</body>
+</html>
