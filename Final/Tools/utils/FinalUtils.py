@@ -1,10 +1,10 @@
+import logging
+
 import pandas as pd
 from collections import deque
 import numpy as np
 import matplotlib.pyplot as plt
 import io
-
-CONSTANT_A = 103054
 
 
 def load_ec_csv(path_to_file: str):
@@ -84,55 +84,47 @@ def create_voltage_schedule(start_time: float, period: int, voltages: list, cycl
 
 def add_potential_to_dataframe(schedule: dict, df: pd.DataFrame) -> pd.DataFrame:
     """
-    Adds a 'potential' column to a DataFrame based on a time-voltage schedule.
+    Assigns a voltage to each time in a DataFrame based on a schedule.
 
-    This function aligns a voltage schedule with a DataFrame's time-based index.
-    It ensures that every row in the DataFrame is assigned the correct voltage
-    that was active at that point in time.
-
-    NOTE: This function will remove rows with duplicate index values to ensure
-    correct alignment, which may change the number of rows in the returned DataFrame.
+    This function applies a 'step function' of voltage. For any time t in the
+    DataFrame, the assigned voltage is the one from the most recent schedule
+    entry before or at time t.
 
     Args:
-        schedule (dict): A dictionary with numeric timestamps as keys and voltages as values.
-        df (pd.DataFrame): The DataFrame to modify. Its index must be numeric (e.g., float or int)
-                           representing time.
+        schedule (dict): A dictionary mapping start times (keys) to voltages (values).
+        df (pd.DataFrame): The DataFrame to which the voltage column will be added.
+                           It must have a time-based index.
 
     Returns:
-        pd.DataFrame: A modified DataFrame with the new 'Applied_Voltage (V)' column added.
-                      The returned DataFrame will be sorted by index and have duplicate
-                      index entries removed.
+        pd.DataFrame: The original DataFrame with a new 'Applied_Voltage (V)' column.
     """
-    # It is crucial to work with a sorted DataFrame for time-series operations.
+
+    logging.info(f'Input shape: {df.shape}, schedule length: {len(schedule)}')
+
+    # Ensure both the DataFrame index and schedule are sorted by time
     df_processed = df.sort_index()
+    schedule_series = pd.Series(schedule).sort_index()
 
-    # # Check for and handle duplicate labels in the DataFrame's index
-    # if df_processed.index.duplicated().any():
-    #     num_duplicates = df_processed.index.duplicated().sum()
-    #     print(f"⚠️ Warning: Found and removed {num_duplicates} duplicate index entries to allow for correct time-based alignment.")
-    #     # Remove duplicates, keeping the first occurrence
-    #     df_processed = df_processed[~df_processed.index.duplicated(keep='first')]
+    # Combine the DataFrame's index with the schedule's time points
+    # This ensures that all voltage change-points are included
+    combined_index = df_processed.index.union(schedule_series.index).sort_values()
 
-    # Create a pandas Series from the schedule. The index of this Series
-    # will be the timestamps at which the voltage changes.
-    potential_series = pd.Series(schedule)
+    # Reindex the schedule to the combined index and forward-fill the values
+    voltage_filled = schedule_series.reindex(combined_index, method='ffill')
 
-    # Reindex the potential series to match the processed DataFrame's index.
-    # 'ffill' (forward fill) ensures that each timestamp in the DataFrame gets the
-    # value from the most recent schedule entry.
-    potential_series_reindexed = potential_series.reindex(df_processed.index, method='ffill')
+    # Now, select only the values corresponding to the original DataFrame's index
+    # This effectively maps the step-function values onto your original time points
+    df_processed['Applied_Voltage (V)'] = voltage_filled.reindex(df_processed.index)
 
-    # Add the result as a new column. Assigning with the index ensures alignment.
-    df_processed['Applied_Voltage (V)'] = potential_series_reindexed
+    logging.info(f'Output shape: {df_processed.shape}')
 
     return df_processed
-
 
 def clean_white_space(df: pd.DataFrame, t: str):
     return df.rename(columns=lambda x: x.strip()).sort_values(t)
 
 
-def load_trunc_icp_csv(icp_df: pd.DataFrame, del_start: int, response_delay: int, t: str) -> pd.DataFrame:
+def load_trunc_icp_csv(icp_df: pd.DataFrame, del_start: int, response_delay: int) -> pd.DataFrame:
     del_start = int(del_start)
     response_delay = int(response_delay)
 
@@ -142,8 +134,8 @@ def load_trunc_icp_csv(icp_df: pd.DataFrame, del_start: int, response_delay: int
     df = icp_df.copy()
 
     # Calculate time range before normalization for debugging
-    time_min_orig = df[t].min()
-    time_max_orig = df[t].max()
+    time_min_orig = df.index.min()
+    time_max_orig = df.index.max()
     time_range_orig = time_max_orig - time_min_orig
     print(f"[load_trunc_icp_csv] Original time range: {time_min_orig} to {time_max_orig} (range: {time_range_orig})")
 
@@ -152,7 +144,7 @@ def load_trunc_icp_csv(icp_df: pd.DataFrame, del_start: int, response_delay: int
     if response_delay > 0:
         delay_point = time_min_orig + response_delay
         print(f"[load_trunc_icp_csv] Filtering raw data before normalization: t >= {delay_point}")
-        mask = df[t] >= delay_point
+        mask = df.index >= delay_point
         rows_before = len(df)
         df = df[mask]
         rows_after = len(df)
@@ -160,8 +152,8 @@ def load_trunc_icp_csv(icp_df: pd.DataFrame, del_start: int, response_delay: int
 
     # Now normalize time AFTER applying response_delay
     if not df.empty:
-        df[t] = df[t] - df[t].min()
-        print(f"[load_trunc_icp_csv] Normalized time range: {df[t].min()} to {df[t].max()}")
+        df.index = df.index - df.index.min()
+        print(f"[load_trunc_icp_csv] Normalized time range: {df.index.min()} to {df.index.max()}")
     else:
         print(f"[load_trunc_icp_csv] WARNING: No data left after response_delay filter!")
         return pd.DataFrame(columns=icp_df.columns)
@@ -182,22 +174,6 @@ def load_trunc_icp_csv(icp_df: pd.DataFrame, del_start: int, response_delay: int
         print(f"[load_trunc_icp_csv] ERROR: No data remains after applying filters!")
         # Return empty DataFrame with correct structure
         return pd.DataFrame(columns=icp_df.columns)
-
-    # Reset index after filtering
-    try:
-        df.set_index('Time', inplace=True)
-        df.sort_index(inplace=True)
-        print(f"[load_trunc_icp_csv] Returning df with shape {df.shape}")
-    except KeyError:
-        print(f"[load_trunc_icp_csv] ERROR: 'Time' column not found! Available columns: {df.columns.tolist()}")
-        # Try to recover by assuming t is the time column
-        if t in df.columns:
-            df.set_index(t, inplace=True)
-            df.sort_index(inplace=True)
-            print(f"[load_trunc_icp_csv] Recovered using {t} column instead, returning df with shape {df.shape}")
-        else:
-            print(f"[load_trunc_icp_csv] Cannot recover, returning empty dataframe")
-            return pd.DataFrame(columns=icp_df.columns)
 
     return df
 
