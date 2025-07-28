@@ -6,7 +6,6 @@ Flask server to handle CSV data processing and region analysis
 
 PORT = 5001
 
-import glob
 import os
 import zipfile
 import config
@@ -16,12 +15,11 @@ import io
 import base64
 from datetime import datetime
 import traceback
-from pathlib import Path
 import numpy as np
 import pandas as pd
 import logging
 from itertools import chain
-from utils.FinalUtils import (load_trunc_icp_csv, load_ec_csv, find_intervals, add_potential, CONSTANT_A, clean_white_space, interpolate)
+from utils.FinalUtils import (load_trunc_icp_csv, load_ec_csv, find_intervals, add_potential, CONSTANT_A )
 
 # Set matplotlib backend to non-interactive (prevents GUI issues on macOS)
 import matplotlib
@@ -29,10 +27,9 @@ matplotlib.use('Agg')
 import matplotlib.pyplot as plt 
 
 from sklearn.linear_model import LinearRegression
-
-from DetectionTools import *
-import sys
+from DetectionTools import merge_close_points, get_detected_intervals
 from utils.OutlierUtils import left_derivatives, get_region, remove_outliers_by_region, sanitize_response_name
+
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
