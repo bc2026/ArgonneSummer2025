@@ -1,0 +1,115 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="AutoImportSettings">
+    <option name="autoReloadType" value="SELECTIVE" />
+  </component>
+  <component name="ChangeListManager">
+    <list default="true" id="1217f7ae-fb32-466f-84f3-eda8f8c8873c" name="Changes" comment="">
+      <change beforePath="$PROJECT_DIR$/Final/Continued-Processing.ipynb" beforeDir="false" afterPath="$PROJECT_DIR$/Final/Continued-Processing.ipynb" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Final/data/Raw data_potential sqwave 0.4-0.95v_1h.csv" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Final/utils.py" beforeDir="false" afterPath="$PROJECT_DIR$/Final/utils.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ICP-MS_EChem_Joining_with_Relations/.gitignore" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ICP-MS_EChem_Joining_with_Relations/main.ipynb" beforeDir="false" afterPath="$PROJECT_DIR$/ICP-MS_EChem_Joining_with_Relations/main.ipynb" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/RemovingOutlierDatapoints/Continued-Processing.ipynb" beforeDir="false" afterPath="$PROJECT_DIR$/RemovingOutlierDatapoints/Continued-Processing.ipynb" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/RemovingOutlierDatapoints/OutlierRemoval_left-derivatives.ipynb" beforeDir="false" afterPath="$PROJECT_DIR$/RemovingOutlierDatapoints/OutlierRemoval_left-derivatives.ipynb" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/RemovingOutlierDatapoints/gui/backend.py" beforeDir="false" afterPath="$PROJECT_DIR$/RemovingOutlierDatapoints/gui/backend.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/RemovingOutlierDatapoints/gui/index.html" beforeDir="false" afterPath="$PROJECT_DIR$/RemovingOutlierDatapoints/gui/index.html" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/RemovingOutlierDatapoints/gui/renderer.js" beforeDir="false" afterPath="$PROJECT_DIR$/RemovingOutlierDatapoints/gui/renderer.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/RemovingOutlierDatapoints/gui/styles.css" beforeDir="false" afterPath="$PROJECT_DIR$/RemovingOutlierDatapoints/gui/styles.css" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/RemovingOutlierDatapoints/output/first_attempt/Sample A_Pt-Stds-070325_modified_july_9th/Derivative-Data-Plot.png" beforeDir="false" afterPath="$PROJECT_DIR$/RemovingOutlierDatapoints/output/first_attempt/Sample A_Pt-Stds-070325_modified_july_9th/Derivative-Data-Plot.png" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/archive/ICP-MS_EChem_Joining/.gitignore" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/archive/TimeVoltRelations/.gitignore" beforeDir="false" />
+    </list>
+    <option name="SHOW_DIALOG" value="false" />
+    <option name="HIGHLIGHT_CONFLICTS" value="true" />
+    <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
+    <option name="LAST_RESOLUTION" value="IGNORE" />
+  </component>
+  <component name="FileTemplateManagerImpl">
+    <option name="RECENT_TEMPLATES">
+      <list>
+        <option value="Python Script" />
+      </list>
+    </option>
+  </component>
+  <component name="ProjectColorInfo">{
+  &quot;associatedIndex&quot;: 2
+}</component>
+  <component name="ProjectId" id="2zxo7yq9ug0LOpkRvP7BgBccJHx" />
+  <component name="ProjectViewState">
+    <option name="hideEmptyMiddlePackages" value="true" />
+    <option name="showLibraryContents" value="true" />
+  </component>
+  <component name="PropertiesComponent">{
+  &quot;keyToString&quot;: {
+    &quot;ModuleVcsDetector.initialDetectionPerformed&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.git.unshallow&quot;: &quot;true&quot;,
+    &quot;database.data.extractors.current.export.id&quot;: &quot;Comma-separated (CSV)_id&quot;,
+    &quot;last_opened_file_path&quot;: &quot;/Users/bc/Library/CloudStorage/Box-Box/Bhagawat_Summer_Student/code_development/Final/data&quot;,
+    &quot;node.js.detected.package.eslint&quot;: &quot;true&quot;,
+    &quot;node.js.detected.package.tslint&quot;: &quot;true&quot;,
+    &quot;node.js.selected.package.eslint&quot;: &quot;(autodetect)&quot;,
+    &quot;node.js.selected.package.tslint&quot;: &quot;(autodetect)&quot;,
+    &quot;nodejs_package_manager_path&quot;: &quot;npm&quot;,
+    &quot;python.debugger.dataview.coloredbydefault&quot;: &quot;false&quot;,
+    &quot;settings.editor.selected.configurable&quot;: &quot;preferences.keymap&quot;,
+    &quot;vue.rearranger.settings.migration&quot;: &quot;true&quot;
+  }
+}</component>
+  <component name="RecentsManager">
+    <key name="CopyFile.RECENT_KEYS">
+      <recent name="$PROJECT_DIR$/Final/data" />
+    </key>
+    <key name="MoveFile.RECENT_KEYS">
+      <recent name="$PROJECT_DIR$/Final/data/Example" />
+    </key>
+  </component>
+  <component name="SharedIndexes">
+    <attachedChunks>
+      <set>
+        <option value="bundled-js-predefined-d6986cc7102b-b26f3e71634d-JavaScript-PY-251.26094.141" />
+        <option value="bundled-python-sdk-9f8e2b94138c-36ea0e71a18c-com.jetbrains.pycharm.pro.sharedIndexes.bundled-PY-251.26094.141" />
+      </set>
+    </attachedChunks>
+  </component>
+  <component name="TaskManager">
+    <task active="true" id="Default" summary="Default task">
+      <changelist id="1217f7ae-fb32-466f-84f3-eda8f8c8873c" name="Changes" comment="" />
+      <created>1752681922598</created>
+      <option name="number" value="Default" />
+      <option name="presentableId" value="Default" />
+      <updated>1752681922598</updated>
+      <workItem from="1752681923818" duration="7152000" />
+      <workItem from="1752699402108" duration="46198000" />
+      <workItem from="1752842139697" duration="12379000" />
+      <workItem from="1753121231353" duration="6471000" />
+    </task>
+    <servers />
+  </component>
+  <component name="TypeScriptGeneratedFilesManager">
+    <option name="version" value="3" />
+  </component>
+  <component name="Vcs.Log.Tabs.Properties">
+    <option name="TAB_STATES">
+      <map>
+        <entry key="MAIN">
+          <value>
+            <State />
+          </value>
+        </entry>
+      </map>
+    </option>
+  </component>
+  <component name="XDebuggerManager">
+    <breakpoint-manager>
+      <breakpoints>
+        <line-breakpoint enabled="true" suspend="THREAD" type="jupyter-line">
+          <url>file://$PROJECT_DIR$/Final/Continued-Processing.ipynb</url>
+          <line>87</line>
+          <option name="timeStamp" value="3" />
+        </line-breakpoint>
+      </breakpoints>
+    </breakpoint-manager>
+  </component>
+</project>
