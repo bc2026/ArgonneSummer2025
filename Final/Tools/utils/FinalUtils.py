@@ -35,15 +35,12 @@ def load_ec_csv(path_to_file: str):
     column_names = ['Voltage (V)', 'Current (A/cm2)', 'Time (s)']
 
     # Step 3: Read the fixed-width file, skipping the header comments
-    df = pd.read_fwf(
-        path_to_file,
-        skiprows=rows_to_skip,
-        names=column_names
-    )
+    df = pd.read_csv(path_to_file)
+    
 
-    # Step 4: Normalize the time column and set it as the index
-    if not df.empty:
-        df['Time (s)'] = df['Time (s)'] - df['Time (s)'].min()
+    # # Step 4: Normalize the time column and set it as the index
+    # if not df.empty:
+    #     df['Time (s)'] = df['Time (s)'] - df['Time (s)'].min()
 
     df.set_index('Time (s)', inplace=True)
     df.sort_index(inplace=True)

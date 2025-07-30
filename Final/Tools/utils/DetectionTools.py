@@ -10,8 +10,8 @@ def get_detected_intervals(shifts, first_region=None):
     """
     intervals = []
     
-    if first_region:
-        intervals.extend(first_region)
+    if not intervals and first_region:
+        intervals.append(first_region)
     
     for j in range(len(shifts)-1):
         intervals.append((shifts[j], shifts[j+1]))  # Simple interval around each shift
