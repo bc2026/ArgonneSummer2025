@@ -9,10 +9,7 @@ import io
 
 def load_ec_csv(path_to_file: str):
     """
-    Loads electrochemical data from a fixed-width file.
-
-    It finds the start of the data after a line containing "End Comments"
-    and reads the three data columns (Voltage, Current, and Time).
+    Loads electrochemical data from a CSV file, starting after the "End Comments" line.
 
     Args:
         path_to_file: The full path to the data file.
@@ -20,7 +17,7 @@ def load_ec_csv(path_to_file: str):
     Returns:
         A pandas DataFrame with a normalized time index.
     """
-    # Step 1: Find the number of metadata rows to skip
+    # Find the number of metadata rows to skip
     rows_to_skip = 0
     with open(path_to_file, 'r', encoding='utf-8', errors='ignore') as f:
         for i, line in enumerate(f):
@@ -30,18 +27,9 @@ def load_ec_csv(path_to_file: str):
         else:
             raise ValueError("'End Comments' line not found in the file.")
 
-    # Step 2: Define column names based on the metadata
-    # The file has three data columns: Voltage, Current, and Time.
-    column_names = ['Voltage (V)', 'Current (A/cm2)', 'Time (s)']
-
-    # Step 3: Read the fixed-width file, skipping the header comments
-    df = pd.read_csv(path_to_file)
-    
-
-    # # Step 4: Normalize the time column and set it as the index
-    # if not df.empty:
-    #     df['Time (s)'] = df['Time (s)'] - df['Time (s)'].min()
-
+    # Read the CSV file, skipping the header comments
+    df = pd.read_csv(path_to_file, skiprows=rows_to_skip-1, header=None, names=['Voltage (V)', 'Current (A/cm2)', 'Time (s)'])
+    # Set 'Time (s)' as the index and sort
     df.set_index('Time (s)', inplace=True)
     df.sort_index(inplace=True)
 
